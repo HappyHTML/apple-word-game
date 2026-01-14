@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apple 🍎 Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Apple 🍎 Game</h1>
+
+    <div id="menu">
+        <button id="single-player-btn">Single Player</button>
+        <button id="multiplayer-btn">Multiplayer</button>
+    </div>
+
+    <div id="multiplayer-menu" class="hidden">
+        <input type="text" id="game-code-input" placeholder="Enter game code...">
+        <button id="join-game-btn">Join Game</button>
+        <button id="create-game-btn">Create Game</button>
+    </div>
+
+    <div id="game-container" class="hidden">
+        <h2 id="game-mode-title"></h2>
+        <p><strong>Final Word:</strong> <span id="final-word"></span></p>
+        <div id="word-history"></div>
+        <div id="turn-indicator"></div>
+        <input type="text" id="word-input" placeholder="Enter your word...">
+        <button id="submit-word">Submit</button>
+        <p id="game-code-display"></p>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

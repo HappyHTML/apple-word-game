@@ -1,0 +1,12 @@
+name = "apple-word-game"
+main = "src/index.js"
+compatibility_date = "2023-01-01"
+
+[durable_objects]
+bindings = [
+  { name = "GAME_ROOMS", class_name = "GameRoom" },
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["GameRoom"]
