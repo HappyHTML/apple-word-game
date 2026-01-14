@@ -1,0 +1,6 @@
+# Ignore Node.js dependencies
+node_modules/
+
+# Ignore Cloudflare Wrangler build artifacts and local development files
+.wrangler/
+node_modules/.mf/
