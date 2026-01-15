@@ -13,5 +13,5 @@ new_sqlite_classes = ["GameRoom"]
 
 [observability]
 [observability.logs]
-enabled = false
+enabled = true
 invocation_logs = true
