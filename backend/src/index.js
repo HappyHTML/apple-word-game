@@ -3,35 +3,44 @@ import {
   GoogleGenerativeAI,
 } from "@google/generative-ai";
 
+// Reusable CORS headers
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+
 export default {
   async fetch(request, env) {
-    // Durable Objects are identified by a name. We'll use the URL path
-    // to derive a name for our Durable Object.
+    // Handle CORS preflight requests
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { headers: corsHeaders });
+    }
+
     let url = new URL(request.url);
     let path = url.pathname.slice(1).split('/');
 
     if (path[0] === "api") {
-      // This is a request for our API
       if (path[1] === "get-word") {
         return this.getRandomWord(env);
       } else if (path[1] === "get-next-word") {
         return this.getNextWord(request, env);
       } else {
-        return new Response("Not Found", { status: 404 });
+        return new Response("Not Found", { status: 404, headers: corsHeaders });
       }
     }
 
     if (path[0] === "game") {
-        // This is a request for a specific game room, handled by our Durable Object.
         let gameId = path[1];
+        if (!gameId) {
+            return new Response("Not Found", { status: 404, headers: corsHeaders });
+        }
         let id = env.GAME_ROOMS.idFromName(gameId);
         let room = env.GAME_ROOMS.get(id);
-
-        // Forward the request to the Durable Object.
         return room.fetch(request);
     }
 
-    return new Response("Not Found", { status: 404 });
+    return new Response("Not Found", { status: 404, headers: corsHeaders });
   },
 
   async getRandomWord(env) {
@@ -45,11 +54,11 @@ export default {
       const text = response.text().trim();
 
       return new Response(JSON.stringify({ word: text }), {
-        headers: { "Content-Type": "application/json" },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } catch (error) {
-      console.error(error);
-      return new Response("Error generating word", { status: 500 });
+      console.error("Gemini API Error:", error.message);
+      return new Response(JSON.stringify({ error: "Error generating word from AI." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
   },
 
@@ -66,11 +75,11 @@ export default {
       const text = response.text().trim();
 
       return new Response(JSON.stringify({ word: text }), {
-        headers: { "Content-Type": "application/json" },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } catch (error) {
-      console.error(error);
-      return new Response("Error generating next word", { status: 500 });
+      console.error("Gemini API Error:", error.message);
+      return new Response(JSON.stringify({ error: "Error generating next word from AI." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
   }
 };
@@ -85,6 +94,11 @@ export class GameRoom {
   }
 
   async fetch(request) {
+    // Handle CORS preflight requests
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { headers: corsHeaders });
+    }
+
     const url = new URL(request.url);
     if (url.pathname.endsWith("/websocket")) {
       if (request.headers.get("Upgrade") != "websocket") {
@@ -98,16 +112,20 @@ export class GameRoom {
     }
 
      if (url.pathname.endsWith("/setFinalWord")) {
-        const { word } = await request.json();
-        this.finalWord = word;
-        return new Response(JSON.stringify({ status: 'ok' }), { headers: { 'Content-Type': 'application/json' } });
+        try {
+            const { word } = await request.json();
+            this.finalWord = word;
+            return new Response(JSON.stringify({ status: 'ok' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        } catch (error) {
+             return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
     }
 
     if (url.pathname.endsWith("/getFinalWord")) {
-        return new Response(JSON.stringify({ word: this.finalWord }), { headers: { 'Content-Type': 'application/json' } });
+        return new Response(JSON.stringify({ word: this.finalWord }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    return new Response("Not found", { status: 404 });
+    return new Response("Not found", { status: 404, headers: corsHeaders });
   }
 
   async handleSession(websocket) {
