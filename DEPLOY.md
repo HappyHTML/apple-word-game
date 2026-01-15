@@ -1,6 +1,6 @@
 # Deploying the Apple 🍎 Game
 
-This guide will walk you through deploying the Apple 🍎 word game to Cloudflare for free. The frontend will be hosted on Cloudflare Pages, and the backend will run on Cloudflare Workers.
+This guide will walk you through deploying the Apple 🍎 word game to Cloudflare for free.
 
 ## Prerequisites
 
@@ -8,76 +8,78 @@ This guide will walk you through deploying the Apple 🍎 word game to Cloudflar
 2.  Node.js and npm installed on your local machine.
 3.  A [Google AI Studio API key](https://aistudio.google.com/app/apikey).
 
-## Step 1: Get Your Google Gemini API Key
+## Step 1: Clone the Repository & Log In
 
-1.  Go to [Google AI Studio](https://aistudio.google.com/app/apikey).
-2.  Click on "Create API key in new project".
-3.  Copy the generated API key and save it somewhere safe. You will need it in a later step.
-
-## Step 2: Deploy the Backend to Cloudflare Workers
-
-The backend consists of a Cloudflare Worker that handles API requests and the WebSocket-based signaling for multiplayer.
-
-1.  **Clone the Repository (if you haven't already):**
+1.  Open your terminal or command line (like Git Bash).
+2.  If you have not already cloned the repository, do so now. If you have, navigate into the project folder.
     ```bash
+    # If you have not cloned it yet:
     git clone <repository-url>
-    cd <repository-directory>/backend
+    cd apple-word-game
     ```
-
-2.  **Install Wrangler CLI:**
-    Wrangler is the command-line tool for managing Cloudflare Workers.
+3.  Log in to your Cloudflare account using the Wrangler command-line tool:
     ```bash
-    npm install -g wrangler
+    npx wrangler login
     ```
+    This command will open a browser window for you to log in and authorize the tool.
 
-3.  **Log in to Cloudflare:**
+## Step 2: Deploy the Backend Worker
+
+The backend handles the game logic, AI, and multiplayer connections.
+
+1.  Navigate to the backend directory:
     ```bash
-    wrangler login
+    cd backend
     ```
-    This will open a browser window for you to log in to your Cloudflare account.
-
-4.  **Deploy the Worker:**
-    Run the following command to deploy the worker. You will be prompted to enter a name for your worker (e.g., `apple-word-game-backend`).
+2.  **Install Dependencies:**
+    This is a crucial step to ensure the worker has all the code it needs to run.
     ```bash
-    wrangler deploy
+    npm install
     ```
-
-5.  **Configure the Gemini API Key Secret:**
-    Now you need to securely add your Google Gemini API key to your worker's environment variables.
+3.  **Deploy to Cloudflare:**
+    Run the following command. The configuration in this repository has been **fixed** to be compatible with Cloudflare's free tier. Wrangler will deploy the code and automatically set up the necessary components for the multiplayer feature.
     ```bash
-    wrangler secret put GEMINI_API_KEY
+    npx wrangler deploy
     ```
-    Paste your API key when prompted.
+    After it's finished, take note of the worker URL in the output. It will look something like `https://apple-word-game.<your-subdomain>.workers.dev`.
 
-## Step 3: Deploy the Frontend to Cloudflare Pages
+4.  **Add Your Google API Key:**
+    Securely add your Google Gemini API key as a secret so the worker can use it.
+    ```bash
+    npx wrangler secret put GEMINI_API_KEY
+    ```
+    Paste your API key when prompted and press Enter.
 
-The frontend is a static site that will be hosted on Cloudflare Pages.
+## Step 3: Deploy the Frontend Application
 
-1.  **Navigate to the `frontend` Directory:**
-    From the root of the repository, change into the `frontend` directory:
+The frontend is the user interface for the game. We will deploy it using Cloudflare Pages.
+
+1.  Navigate to the frontend directory from the `backend` folder:
     ```bash
     cd ../frontend
     ```
-
-2.  **Deploy with Wrangler:**
-    The easiest way to do a one-time deployment of a static folder is with Wrangler.
+2.  **Deploy to Cloudflare Pages:**
+    Run the following command. You will be prompted to select your Cloudflare account and enter a project name (e.g., `apple-word-game`).
     ```bash
-    wrangler pages deploy .
+    npx wrangler pages deploy .
     ```
-    You will be prompted to select your Cloudflare account and enter a project name (e.g., `apple-word-game`).
+    This will give you a URL for your live game, for example: `https://apple-word-game.pages.dev`.
 
-3.  **Configure API Proxying:**
-    The final step is to make sure your frontend can communicate with your backend worker. You need to set up a redirect so that requests to `/api/*` on your Pages site are forwarded to your worker.
+## Step 4: Connect Frontend to Backend
 
-    a. In the Cloudflare dashboard, go to your Pages project.
-    b. Go to **Settings > Functions**.
-    c. Under **Routes**, add a route:
-        - **Route:** `/api/*`
-        - **Service:** Your Cloudflare Worker (e.g., `apple-word-game-backend`)
-        - **Environment:** `production`
+The final step is to tell your live frontend how to communicate with your live backend.
 
-    d. Click **Save**.
+1.  Go to your [Cloudflare Dashboard](https://dash.cloudflare.com).
+2.  Select **Workers & Pages** from the sidebar.
+3.  Find your Pages project (e.g., `apple-word-game`) and click on it.
+4.  Go to the **Settings** tab, then select the **Functions** sub-menu.
+5.  Under the **Routes** section, click **Add route**.
+6.  Configure the route to forward all API requests to your worker:
+    -   **Route:** `/api/*`
+    -   **Service:** Select your backend worker from the dropdown (e.g., `apple-word-game`).
+    -   **Environment:** `production`
+7.  Click **Save route**.
 
 ## You're Done!
 
-Your Apple 🍎 game should now be live! You can access it at the URL provided by Cloudflare Pages.
+Your Apple 🍎 game is now fully deployed and live. You can play it by visiting your Cloudflare Pages URL (e.g., `https://apple-word-game.pages.dev`).
