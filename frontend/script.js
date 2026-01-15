@@ -42,14 +42,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Game Mode Selection ---
     function showMultiplayerMenu() {
-        menuDiv.classList.add('hidden');
-        multiplayerMenuDiv.classList.remove('hidden');
+        menuDiv.style.display = 'none';
+        multiplayerMenuDiv.style.display = 'flex';
     }
 
     async function startSinglePlayerGame() {
         gameMode = 'single';
-        menuDiv.classList.add('hidden');
-        gameContainerDiv.classList.remove('hidden');
+        menuDiv.style.display = 'none';
+        multiplayerMenuDiv.style.display = 'none';
+        gameContainerDiv.style.display = 'block';
         gameModeTitle.textContent = 'Single Player';
         await fetchFinalWord();
         updateHistory();
@@ -59,7 +60,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Core Game Logic ---
     async function fetchFinalWord() {
         try {
-            const response = await fetch('/api/generate-word');
+            // CORRECTED ENDPOINT
+            const response = await fetch('/api/get-word');
             if (!response.ok) throw new Error('Failed to fetch final word');
             const data = await response.json();
             finalWord = data.word;
@@ -112,10 +114,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function getAiTurn() {
         try {
-            const response = await fetch('/api/ai-turn', {
+            // CORRECTED ENDPOINT
+            const response = await fetch('/api/get-next-word', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ history, finalWord }),
+                body: JSON.stringify({ wordChain: history, finalWord }),
             });
             if (!response.ok) throw new Error('AI failed to respond');
             const data = await response.json();
@@ -154,11 +157,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
 
+        await fetchFinalWord(); // Fetch the word
+
+        // Wait for websocket to be open before sending offer and setting the word on the backend
         socket.onopen = () => {
             socket.send(JSON.stringify({ type: 'offer', sdp: peerConnection.localDescription }));
+            // Set the final word on the backend for the other player to fetch
+            fetch(`/game/${gameCode}/setFinalWord`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ word: finalWord }),
+            });
         };
 
-        await fetchFinalWord();
         updateHistory();
         setTurn(true); // Creator goes first
     }
@@ -172,14 +183,22 @@ document.addEventListener('DOMContentLoaded', () => {
         gameModeTitle.textContent = 'Multiplayer';
         gameMode = 'multi';
 
+        // Fetch the final word from the backend
+        const response = await fetch(`/game/${gameCode}/getFinalWord`);
+        const data = await response.json();
+        finalWord = data.word;
+        finalWordSpan.textContent = finalWord;
+
         setupWebSocket();
         setupPeerConnection();
+        updateHistory();
         setTurn(false); // Joiner goes second
     }
 
     function setupWebSocket() {
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${wsProtocol}//${window.location.host}/api/game/${gameCode}/websocket`;
+        // CORRECTED WEBSOCKET URL
+        const wsUrl = `${wsProtocol}//${window.location.host}/game/${gameCode}/websocket`;
         socket = new WebSocket(wsUrl);
 
         socket.onmessage = async (event) => {
@@ -219,12 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function setupDataChannel() {
-        dataChannel.onopen = () => {
-            console.log('Data channel is open!');
-            if (isMyTurn) { // The creator of the game will have isMyTurn = true
-                dataChannel.send(JSON.stringify({ type: 'finalWord', word: finalWord }));
-            }
-        };
+        dataChannel.onopen = () => console.log('Data channel is open!');
 
         dataChannel.onmessage = (event) => {
             const message = JSON.parse(event.data);
@@ -236,10 +250,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     setTurn(true);
                 }
-            } else if (message.type === 'finalWord') {
-                finalWord = message.word;
-                finalWordSpan.textContent = finalWord;
-                updateHistory();
             }
         };
     }

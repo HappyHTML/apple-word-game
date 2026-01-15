@@ -37,11 +37,10 @@ The backend handles the game logic, AI, and multiplayer connections.
     npm install
     ```
 3.  **Deploy to Cloudflare:**
-    Run the following command. The configuration in this repository has been **fixed** to be compatible with Cloudflare's free tier. Wrangler will deploy the code and automatically set up the necessary components for the multiplayer feature.
+    Run the following command. Wrangler will deploy the code and automatically set up the necessary components.
     ```bash
     npx wrangler deploy
     ```
-    After it's finished, take note of the worker URL in the output. It will look something like `https://apple-word-game.<your-subdomain>.workers.dev`.
 
 4.  **Add Your Google API Key:**
     Securely add your Google Gemini API key as a secret so the worker can use it.
@@ -63,23 +62,9 @@ The frontend is the user interface for the game. We will deploy it using Cloudfl
     ```bash
     npx wrangler pages deploy .
     ```
-    This will give you a URL for your live game, for example: `https://apple-word-game.pages.dev`.
-
-## Step 4: Connect Frontend to Backend
-
-The final step is to tell your live frontend how to communicate with your live backend.
-
-1.  Go to your [Cloudflare Dashboard](https://dash.cloudflare.com).
-2.  Select **Workers & Pages** from the sidebar.
-3.  Find your Pages project (e.g., `apple-word-game`) and click on it.
-4.  Go to the **Settings** tab, then select the **Functions** sub-menu.
-5.  Under the **Routes** section, click **Add route**.
-6.  Configure the route to forward all API requests to your worker:
-    -   **Route:** `/api/*`
-    -   **Service:** Select your backend worker from the dropdown (e.g., `apple-word-game`).
-    -   **Environment:** `production`
-7.  Click **Save route**.
 
 ## You're Done!
+
+That's it! The connection between your frontend and backend is now handled **automatically**. The `_routes.json` file in the `frontend` directory tells Cloudflare Pages how to route requests to your Worker.
 
 Your Apple 🍎 game is now fully deployed and live. You can play it by visiting your Cloudflare Pages URL (e.g., `https://apple-word-game.pages.dev`).

@@ -1,0 +1,15 @@
+{
+  "name": "apple-word-game-backend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "start": "wrangler dev"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.11.3"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}
