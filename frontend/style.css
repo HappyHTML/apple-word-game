@@ -8,15 +8,23 @@ body {
     padding: 10px;
 }
 
-#menu, #multiplayer-menu {
+#menu {
     margin-bottom: 20px;
     display: flex;
     flex-direction: column;
     gap: 10px;
 }
 
+#multiplayer-menu, #game-container {
+    display: none; /* Hidden by default */
+    margin-bottom: 20px;
+    flex-direction: column;
+    gap: 10px;
+}
+
 #game-container {
     margin-top: 20px;
+    display: none; /* Hidden by default */
     border: 1px solid #ccc;
     padding: 20px;
     border-radius: 5px;
