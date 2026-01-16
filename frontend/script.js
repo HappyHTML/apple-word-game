@@ -45,15 +45,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Game Mode Selection ---
     function showMultiplayerMenu() {
-        menuDiv.style.display = 'none';
-        multiplayerMenuDiv.style.display = 'flex';
+        menuDiv.classList.add('hidden');
+        multiplayerMenuDiv.classList.remove('hidden');
     }
 
     async function startSinglePlayerGame() {
         gameMode = 'single';
-        menuDiv.style.display = 'none';
-        multiplayerMenuDiv.style.display = 'none';
-        gameContainerDiv.style.display = 'block';
+        menuDiv.classList.add('hidden');
+        multiplayerMenuDiv.classList.add('hidden');
+        gameContainerDiv.classList.remove('hidden');
+        gameContainerDiv.style.display = 'flex'; // Force display
         gameModeTitle.textContent = 'Single Player';
         await fetchFinalWord();
         updateHistory();
@@ -91,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 dataChannel.send(JSON.stringify({ type: 'word', word: newWord }));
             }
 
-            if (newWord === finalWord) {
+            if (newWord === finalWord.toLowerCase()) {
                 endGame('You reached the final word! 🎉');
             } else {
                 setTurn(false);
@@ -128,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
             history.push(aiWord);
             updateHistory();
 
-            if (aiWord === finalWord) {
+            if (aiWord === finalWord.toLowerCase()) {
                 endGame('The AI reached the final word!');
             } else {
                 setTurn(true);
@@ -244,7 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (message.type === 'word') {
                 history.push(message.word);
                 updateHistory();
-                if (message.word === finalWord) {
+                if (message.word === finalWord.toLowerCase()) {
                     endGame('Your opponent reached the final word!');
                 } else {
                     setTurn(true);
