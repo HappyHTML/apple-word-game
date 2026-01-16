@@ -38,54 +38,98 @@ export default {
     return new Response("Not Found", { status: 404, headers: corsHeaders });
   },
 
-  async callGeminiAPI(prompt, apiKey) {
+  async callGroqAPI(prompt, apiKey) {
     try {
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+      const apiUrl = 'https://api.groq.com/openai/v1/chat/completions';
       
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: prompt
-            }]
-          }]
+          model: 'llama-3.3-70b-versatile',
+          messages: [
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          temperature: 1,
+          max_tokens: 50
         })
       });
 
       const data = await response.json();
       
       if (!response.ok) {
-        console.error('Gemini API Response:', data);
-        throw new Error(`Gemini API error: ${response.status} - ${JSON.stringify(data)}`);
+        console.error('Groq API Response:', data);
+        throw new Error(`Groq API error: ${response.status} - ${JSON.stringify(data)}`);
       }
 
-      if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
         console.error('Unexpected API response structure:', data);
-        throw new Error('Invalid response structure from Gemini API');
+        throw new Error('Invalid response structure from Groq API');
       }
 
-      return data.candidates[0].content.parts[0].text.trim();
+      return data.choices[0].message.content.trim();
     } catch (error) {
-      console.error('Gemini API call failed:', error);
+      console.error('Groq API call failed:', error);
       throw error;
     }
   },
 
   async getRandomWord(env) {
     try {
-      const prompt = "Generate a single, common, one-word noun that is safe for work and appropriate for all audiences. Examples: House, Car, River, Mountain, Book. Do not add any extra text, just the word.";
-      const text = await this.callGeminiAPI(prompt, env.GEMINI_API_KEY);
+      if (!env.GROQ_API_KEY) {
+        console.error("GROQ_API_KEY is not set");
+        return new Response(JSON.stringify({ error: "API key not configured" }), { 
+          status: 500, 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
+      }
 
-      return new Response(JSON.stringify({ word: text }), {
+      // Generate random elements to force variety
+      const timestamp = Date.now();
+      const randomNum = Math.floor(Math.random() * 10000);
+      const categories = ['animal', 'food', 'vehicle', 'tool', 'weather', 'sport', 'plant', 'building', 'furniture', 'hobby', 'profession', 'country', 'instrument', 'appliance', 'color', 'material'];
+      const randomCategory = categories[Math.floor(Math.random() * categories.length)];
+      
+      const prompt = `You are generating a word for a word game. Generate ONE completely random, unpredictable common noun from the category: ${randomCategory}.
+
+CRITICAL: Be EXTREMELY varied - avoid repeating patterns. Don't favor any particular letters or sounds.
+
+Requirements:
+- Single word only
+- Must be family-friendly and appropriate for children
+- NO profanity, slurs, or inappropriate content
+- Should be a recognizable everyday object, creature, or thing
+- Mix up the starting letters - use ALL letters of the alphabet randomly
+
+Avoid: tree, house, kite, kazoo, kiln (these are overused)
+
+Random factors: ${timestamp}-${randomNum}
+
+Respond with ONLY the word, nothing else:`;
+
+      const text = await this.callGroqAPI(prompt, env.GROQ_API_KEY);
+      
+      // Clean the response
+      const cleanWord = text.toLowerCase()
+        .replace(/[.,!?'"]/g, '')
+        .trim()
+        .split(/\s+/)[0];
+
+      return new Response(JSON.stringify({ word: cleanWord }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } catch (error) {
-      console.error("Gemini API Error:", error.message);
-      return new Response(JSON.stringify({ error: "Error generating word from AI." }), { 
+      console.error("Groq API Error:", error);
+      return new Response(JSON.stringify({ 
+        error: "Error generating word from AI.", 
+        details: error.message
+      }), { 
         status: 500, 
         headers: { ...corsHeaders, "Content-Type": "application/json" } 
       });
@@ -95,16 +139,47 @@ export default {
   async getNextWord(request, env) {
     try {
       const { wordChain, finalWord } = await request.json();
+      const currentWord = wordChain[wordChain.length - 1];
       
-      const prompt = `You are playing a word association game. The goal is to get from the first word to the last word by saying related words. The current word chain is: "${wordChain.join(", ")}". The final word is "${finalWord}". What is the next logical word in the chain? The word must be related to the previous word, "${wordChain[wordChain.length - 1]}". Respond with only the next word.`;
+      // Calculate how far we are in the game
+      const chainLength = wordChain.length;
+      
+      let prompt;
+      
+      // If we're getting close to having tried many words, make the AI aim for the final word
+      if (chainLength > 8) {
+        prompt = `You are playing a word association game. You need to get from "${currentWord}" to "${finalWord}". 
+Think of ONE word that connects these two words - it should be related to "${currentWord}" but also get you closer to "${finalWord}".
+Words already used: ${wordChain.join(", ")}
+DO NOT repeat any of these words.
+If "${currentWord}" is very close to "${finalWord}" conceptually, you can say "${finalWord}" directly.
+Respond with ONLY ONE WORD, nothing else.`;
+      } else {
+        prompt = `You are playing a word association game. The goal is to eventually reach the word "${finalWord}".
+Current word: "${currentWord}"
+Words already used: ${wordChain.join(", ")}
 
-      const text = await this.callGeminiAPI(prompt, env.GEMINI_API_KEY);
+Think of ONE word that is:
+1. Related to "${currentWord}"
+2. Moves toward the concept of "${finalWord}"
+3. NOT already in the list above
 
-      return new Response(JSON.stringify({ word: text }), {
+Respond with ONLY ONE WORD, nothing else. No punctuation, no explanation.`;
+      }
+
+      const text = await this.callGroqAPI(prompt, env.GROQ_API_KEY);
+      
+      // Clean the response - remove any extra text, quotes, or punctuation
+      const cleanWord = text.toLowerCase()
+        .replace(/[.,!?'"]/g, '')
+        .trim()
+        .split(/\s+/)[0]; // Take only the first word if multiple
+
+      return new Response(JSON.stringify({ word: cleanWord }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } catch (error) {
-      console.error("Gemini API Error:", error.message);
+      console.error("Groq API Error:", error.message);
       return new Response(JSON.stringify({ error: "Error generating next word from AI." }), { 
         status: 500, 
         headers: { ...corsHeaders, "Content-Type": "application/json" } 
