@@ -46,7 +46,7 @@ export default {
   async getRandomWord(env) {
     try {
       const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-001" });
 
       const prompt = "Generate a single, common, one-word noun that is safe for work and appropriate for all audiences. Examples: House, Car, River, Mountain, Book. Do not add any extra text, just the word.";
       const result = await model.generateContent(prompt);
@@ -66,7 +66,7 @@ export default {
     try {
       const { wordChain, finalWord } = await request.json();
       const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-001" });
 
       const prompt = `You are playing a word association game. The goal is to get from the first word to the last word by saying related words. The current word chain is: "${wordChain.join(", ")}". The final word is "${finalWord}". What is the next logical word in the chain? The word must be related to the previous word, "${wordChain[wordChain.length - 1]}". Respond with only the next word.`;
 

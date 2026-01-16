@@ -16,9 +16,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const submitButton = document.getElementById('submit-word');
     const gameCodeDisplay = document.getElementById('game-code-display');
 
-    // Backend URL
-    const backendUrl = 'https://apple-word-game.a-human-being.workers.dev';
-
     // Game State
     let history = ['apple'];
     let finalWord = '';
@@ -63,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Core Game Logic ---
     async function fetchFinalWord() {
         try {
-            const response = await fetch(`${backendUrl}/api/get-word`);
+            const response = await fetch('/api/get-word');
             if (!response.ok) throw new Error('Failed to fetch final word');
             const data = await response.json();
             finalWord = data.word;
@@ -116,7 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function getAiTurn() {
         try {
-            const response = await fetch(`${backendUrl}/api/get-next-word`, {
+            const response = await fetch('/api/get-next-word', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ wordChain: history, finalWord }),
@@ -164,7 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
         socket.onopen = () => {
             socket.send(JSON.stringify({ type: 'offer', sdp: peerConnection.localDescription }));
             // Set the final word on the backend for the other player to fetch
-            fetch(`${backendUrl}/game/${gameCode}/setFinalWord`, {
+            fetch(`/game/${gameCode}/setFinalWord`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ word: finalWord }),
@@ -185,7 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
         gameMode = 'multi';
 
         // Fetch the final word from the backend
-        const response = await fetch(`${backendUrl}/game/${gameCode}/getFinalWord`);
+        const response = await fetch(`/game/${gameCode}/getFinalWord`);
         const data = await response.json();
         finalWord = data.word;
         finalWordSpan.textContent = finalWord;
@@ -197,7 +194,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function setupWebSocket() {
-        const wsUrl = `${backendUrl.replace(/^http/, 'ws')}/game/${gameCode}/websocket`;
+        const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${location.host}/game/${gameCode}/websocket`;
         socket = new WebSocket(wsUrl);
 
         socket.onmessage = async (event) => {
