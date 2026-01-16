@@ -1,8 +1,3 @@
-
-import {
-  GoogleGenerativeAI,
-} from "@google/generative-ai";
-
 // Reusable CORS headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -43,43 +38,77 @@ export default {
     return new Response("Not Found", { status: 404, headers: corsHeaders });
   },
 
+  async callGeminiAPI(prompt, apiKey) {
+    try {
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+      
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: prompt
+            }]
+          }]
+        })
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        console.error('Gemini API Response:', data);
+        throw new Error(`Gemini API error: ${response.status} - ${JSON.stringify(data)}`);
+      }
+
+      if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+        console.error('Unexpected API response structure:', data);
+        throw new Error('Invalid response structure from Gemini API');
+      }
+
+      return data.candidates[0].content.parts[0].text.trim();
+    } catch (error) {
+      console.error('Gemini API call failed:', error);
+      throw error;
+    }
+  },
+
   async getRandomWord(env) {
     try {
-      const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
       const prompt = "Generate a single, common, one-word noun that is safe for work and appropriate for all audiences. Examples: House, Car, River, Mountain, Book. Do not add any extra text, just the word.";
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text().trim();
+      const text = await this.callGeminiAPI(prompt, env.GEMINI_API_KEY);
 
       return new Response(JSON.stringify({ word: text }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } catch (error) {
       console.error("Gemini API Error:", error.message);
-      return new Response(JSON.stringify({ error: "Error generating word from AI." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "Error generating word from AI." }), { 
+        status: 500, 
+        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      });
     }
   },
 
   async getNextWord(request, env) {
     try {
       const { wordChain, finalWord } = await request.json();
-      const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
+      
       const prompt = `You are playing a word association game. The goal is to get from the first word to the last word by saying related words. The current word chain is: "${wordChain.join(", ")}". The final word is "${finalWord}". What is the next logical word in the chain? The word must be related to the previous word, "${wordChain[wordChain.length - 1]}". Respond with only the next word.`;
 
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text().trim();
+      const text = await this.callGeminiAPI(prompt, env.GEMINI_API_KEY);
 
       return new Response(JSON.stringify({ word: text }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } catch (error) {
       console.error("Gemini API Error:", error.message);
-      return new Response(JSON.stringify({ error: "Error generating next word from AI." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "Error generating next word from AI." }), { 
+        status: 500, 
+        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      });
     }
   }
 };
@@ -115,14 +144,21 @@ export class GameRoom {
         try {
             const { word } = await request.json();
             this.finalWord = word;
-            return new Response(JSON.stringify({ status: 'ok' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+            return new Response(JSON.stringify({ status: 'ok' }), { 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            });
         } catch (error) {
-             return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+             return new Response(JSON.stringify({ error: 'Invalid JSON' }), { 
+               status: 400, 
+               headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+             });
         }
     }
 
     if (url.pathname.endsWith("/getFinalWord")) {
-        return new Response(JSON.stringify({ word: this.finalWord }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        return new Response(JSON.stringify({ word: this.finalWord }), { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
     }
 
     return new Response("Not found", { status: 404, headers: corsHeaders });
