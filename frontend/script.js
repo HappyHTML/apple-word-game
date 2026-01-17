@@ -16,6 +16,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const submitButton = document.getElementById('submit-word');
     const gameCodeDisplay = document.getElementById('game-code-display');
 
+    // Backend URL
+    const backendUrl = 'https://apple-word-game.a-human-being.workers.dev';
+
     // Game State
     let history = ['apple'];
     let finalWord = '';
@@ -27,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let dataChannel;
     let gameCode;
     let socket;
+    let iceCandidateQueue = [];
 
     // --- Event Listeners ---
     singlePlayerBtn.addEventListener('click', startSinglePlayerGame);
@@ -42,15 +46,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Game Mode Selection ---
     function showMultiplayerMenu() {
-        menuDiv.style.display = 'none';
-        multiplayerMenuDiv.style.display = 'flex';
+        menuDiv.classList.add('hidden');
+        multiplayerMenuDiv.classList.remove('hidden');
+        multiplayerMenuDiv.style.display = 'flex'; // Force display
     }
 
     async function startSinglePlayerGame() {
         gameMode = 'single';
-        menuDiv.style.display = 'none';
-        multiplayerMenuDiv.style.display = 'none';
-        gameContainerDiv.style.display = 'block';
+        menuDiv.classList.add('hidden');
+        multiplayerMenuDiv.classList.add('hidden');
+        gameContainerDiv.classList.remove('hidden');
+        gameContainerDiv.style.display = 'flex'; // Force display
         gameModeTitle.textContent = 'Single Player';
         await fetchFinalWord();
         updateHistory();
@@ -60,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Core Game Logic ---
     async function fetchFinalWord() {
         try {
-            const response = await fetch('/api/get-word');
+            const response = await fetch(`${backendUrl}/api/get-word`);
             if (!response.ok) throw new Error('Failed to fetch final word');
             const data = await response.json();
             finalWord = data.word;
@@ -84,11 +90,11 @@ document.addEventListener('DOMContentLoaded', () => {
             updateHistory();
             wordInput.value = '';
 
-            if (gameMode === 'multi' && dataChannel) {
+            if (gameMode === 'multi' && dataChannel && dataChannel.readyState === 'open') {
                 dataChannel.send(JSON.stringify({ type: 'word', word: newWord }));
             }
 
-            if (newWord === finalWord) {
+            if (newWord === finalWord.toLowerCase()) {
                 endGame('You reached the final word! 🎉');
             } else {
                 setTurn(false);
@@ -113,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function getAiTurn() {
         try {
-            const response = await fetch('/api/get-next-word', {
+            const response = await fetch(`${backendUrl}/api/get-next-word`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ wordChain: history, finalWord }),
@@ -125,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
             history.push(aiWord);
             updateHistory();
 
-            if (aiWord === finalWord) {
+            if (aiWord === finalWord.toLowerCase()) {
                 endGame('The AI reached the final word!');
             } else {
                 setTurn(true);
@@ -146,30 +152,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
         multiplayerMenuDiv.classList.add('hidden');
         gameContainerDiv.classList.remove('hidden');
+        gameContainerDiv.style.display = 'flex';
         gameModeTitle.textContent = 'Multiplayer';
         gameMode = 'multi';
 
-        setupWebSocket();
-        setupPeerConnection();
-
-        const offer = await peerConnection.createOffer();
-        await peerConnection.setLocalDescription(offer);
-
         await fetchFinalWord(); // Fetch the word
 
-        // Wait for websocket to be open before sending offer and setting the word on the backend
-        socket.onopen = () => {
-            socket.send(JSON.stringify({ type: 'offer', sdp: peerConnection.localDescription }));
-            // Set the final word on the backend for the other player to fetch
-            fetch(`/game/${gameCode}/setFinalWord`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ word: finalWord }),
-            });
-        };
+        // Setup WebSocket and wait for it to open
+        await setupWebSocket();
+
+        // Setup peer connection and CREATE data channel (creator only)
+        setupPeerConnection(true); // true = creator
+
+        // Set the final word on the backend for the other player to fetch
+        await fetch(`${backendUrl}/game/${gameCode}/setFinalWord`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ word: finalWord }),
+        });
 
         updateHistory();
-        setTurn(true); // Creator goes first
+        // Don't enable turn yet - wait for data channel to open
+        isMyTurn = true;
+        wordInput.disabled = true; // Will be enabled when data channel opens
+        submitButton.disabled = true;
+        turnIndicatorDiv.textContent = "Waiting for opponent to join... (Share code: " + gameCode + ")";
+
+        // Wait for player-joined message before creating offer
+        // This ensures both players are connected before WebRTC negotiation
     }
 
     async function joinMultiplayerGame() {
@@ -178,71 +188,172 @@ document.addEventListener('DOMContentLoaded', () => {
 
         multiplayerMenuDiv.classList.add('hidden');
         gameContainerDiv.classList.remove('hidden');
+        gameContainerDiv.style.display = 'flex';
         gameModeTitle.textContent = 'Multiplayer';
         gameMode = 'multi';
 
         // Fetch the final word from the backend
-        const response = await fetch(`/game/${gameCode}/getFinalWord`);
+        const response = await fetch(`${backendUrl}/game/${gameCode}/getFinalWord`);
         const data = await response.json();
         finalWord = data.word;
         finalWordSpan.textContent = finalWord;
 
-        setupWebSocket();
-        setupPeerConnection();
+        // Setup WebSocket and wait for connection
+        await setupWebSocket();
+        
+        // Setup peer connection but DON'T create data channel (joiner receives it)
+        setupPeerConnection(false); // false = joiner
+        
         updateHistory();
-        setTurn(false); // Joiner goes second
+        isMyTurn = false;
+        wordInput.disabled = true;
+        submitButton.disabled = true;
+        turnIndicatorDiv.textContent = "Waiting for connection...";
     }
 
     function setupWebSocket() {
-        const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${wsProtocol}//${location.host}/game/${gameCode}/websocket`;
-        socket = new WebSocket(wsUrl);
+        return new Promise((resolve, reject) => {
+            const wsUrl = `${backendUrl.replace(/^http/, 'ws')}/game/${gameCode}/websocket`;
+            socket = new WebSocket(wsUrl);
 
-        socket.onmessage = async (event) => {
-            const message = JSON.parse(event.data);
+            socket.onopen = () => {
+                console.log('WebSocket connected!');
+                resolve();
+            };
 
-            if (message.type === 'offer') {
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(message.sdp));
-                const answer = await peerConnection.createAnswer();
-                await peerConnection.setLocalDescription(answer);
-                socket.send(JSON.stringify({ type: 'answer', sdp: peerConnection.localDescription }));
-            } else if (message.type === 'answer') {
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(message.sdp));
-            } else if (message.type === 'candidate') {
-                await peerConnection.addIceCandidate(new RTCIceCandidate(message.candidate));
-            }
-        };
+            socket.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                reject(error);
+            };
+
+            socket.onmessage = async (event) => {
+                const message = JSON.parse(event.data);
+                console.log('Received message:', message.type);
+
+                if (message.type === 'player-joined') {
+                    console.log('Player joined! Count:', message.count);
+                    // If we're the creator and a second player joined, send the offer now
+                    if (gameMode === 'multi' && peerConnection && !peerConnection.remoteDescription) {
+                        console.log('Second player joined, creating and sending offer...');
+                        const offer = await peerConnection.createOffer();
+                        await peerConnection.setLocalDescription(offer);
+                        socket.send(JSON.stringify({ type: 'offer', sdp: peerConnection.localDescription }));
+                    }
+                    return;
+                }
+
+                if (message.type === 'offer') {
+                    console.log('Setting remote description (offer)');
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(message.sdp));
+                    
+                    // Process any queued ICE candidates
+                    while (iceCandidateQueue.length > 0) {
+                        const candidate = iceCandidateQueue.shift();
+                        try {
+                            await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+                            console.log('Added queued ICE candidate');
+                        } catch (e) {
+                            console.error('Error adding queued ICE candidate:', e);
+                        }
+                    }
+                    
+                    const answer = await peerConnection.createAnswer();
+                    await peerConnection.setLocalDescription(answer);
+                    console.log('Sending answer');
+                    socket.send(JSON.stringify({ type: 'answer', sdp: peerConnection.localDescription }));
+                } else if (message.type === 'answer') {
+                    console.log('Setting remote description (answer)');
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(message.sdp));
+                    
+                    // Process any queued ICE candidates
+                    while (iceCandidateQueue.length > 0) {
+                        const candidate = iceCandidateQueue.shift();
+                        try {
+                            await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+                            console.log('Added queued ICE candidate');
+                        } catch (e) {
+                            console.error('Error adding queued ICE candidate:', e);
+                        }
+                    }
+                } else if (message.type === 'candidate') {
+                    console.log('Received ICE candidate');
+                    try {
+                        if (peerConnection.remoteDescription) {
+                            await peerConnection.addIceCandidate(new RTCIceCandidate(message.candidate));
+                            console.log('Added ICE candidate');
+                        } else {
+                            console.log('Queuing ICE candidate (no remote description yet)');
+                            iceCandidateQueue.push(message.candidate);
+                        }
+                    } catch (e) {
+                        console.error('Error adding ICE candidate:', e);
+                    }
+                }
+            };
+        });
     }
 
-    function setupPeerConnection() {
+    function setupPeerConnection(isCreator) {
         peerConnection = new RTCPeerConnection({
             iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
         });
 
         peerConnection.onicecandidate = (event) => {
-            if (event.candidate) {
+            if (event.candidate && socket && socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify({ type: 'candidate', candidate: event.candidate }));
+                console.log('Sent ICE candidate');
             }
         };
 
+        peerConnection.onconnectionstatechange = () => {
+            console.log('Connection state:', peerConnection.connectionState);
+        };
+
+        peerConnection.oniceconnectionstatechange = () => {
+            console.log('ICE connection state:', peerConnection.iceConnectionState);
+        };
+
+        // For the joiner - receive the data channel
         peerConnection.ondatachannel = (event) => {
+            console.log('Received data channel from creator');
             dataChannel = event.channel;
             setupDataChannel();
         };
 
-        dataChannel = peerConnection.createDataChannel('game');
-        setupDataChannel();
+        // For the creator only - create the data channel
+        if (isCreator) {
+            dataChannel = peerConnection.createDataChannel('game');
+            setupDataChannel();
+            console.log('Created data channel as creator');
+        } else {
+            console.log('Waiting to receive data channel as joiner');
+        }
     }
 
     function setupDataChannel() {
-        dataChannel.onopen = () => console.log('Data channel is open!');
+        dataChannel.onopen = () => {
+            console.log('Data channel is open!');
+            // Enable input once data channel is ready
+            if (isMyTurn) {
+                wordInput.disabled = false;
+                submitButton.disabled = false;
+            }
+        };
+
+        dataChannel.onclose = () => {
+            console.log('Data channel closed');
+        };
+
+        dataChannel.onerror = (error) => {
+            console.error('Data channel error:', error);
+        };
 
         dataChannel.onmessage = (event) => {
             const message = JSON.parse(event.data);
             if (message.type === 'word') {
                 history.push(message.word);
                 updateHistory();
-                if (message.word === finalWord) {
+                if (message.word === finalWord.toLowerCase()) {
                     endGame('Your opponent reached the final word!');
                 } else {
                     setTurn(true);
