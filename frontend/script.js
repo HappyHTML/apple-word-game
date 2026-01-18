@@ -57,6 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatMessages = document.getElementById('chat-messages');
     const chatInput = document.getElementById('chat-input');
     const sendChatBtn = document.getElementById('send-chat-btn');
+    const toggleChatBtn = document.getElementById('toggle-chat-btn');
     
     // Confetti Canvas
     const confettiCanvas = document.getElementById('confetti-canvas');
@@ -136,6 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Chat
     sendChatBtn.addEventListener('click', sendChatMessage);
+    toggleChatBtn.addEventListener('click', toggleChat);
     chatInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') sendChatMessage();
     });
@@ -815,24 +817,55 @@ document.addEventListener('DOMContentLoaded', () => {
                 ctx.textAlign = 'center';
                 ctx.fillText(`Replay: ${window.currentReplay.finalWord}`, canvas.width / 2, 60);
                 
-                // Word history
+                // Word history - with scrolling effect
                 ctx.font = '24px sans-serif';
                 const startY = 120;
+                const lineHeight = 40;
+                const maxVisibleLines = 10; // Show 10 words at a time
+                
+                // Calculate scroll offset to keep current word visible
+                let scrollOffset = 0;
+                if (currentWordIndex >= maxVisibleLines) {
+                    scrollOffset = (currentWordIndex - maxVisibleLines + 1) * lineHeight;
+                }
+                
                 const visibleWords = words.slice(0, currentWordIndex + 1);
                 
+                // Create clipping region for scrolling
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(0, startY - 30, canvas.width, maxVisibleLines * lineHeight + 60);
+                ctx.clip();
+                
                 visibleWords.forEach((word, i) => {
-                    const y = startY + (i * 40);
-                    if (y < canvas.height - 100) {
+                    const y = startY + (i * lineHeight) - scrollOffset;
+                    // Only draw if within visible area
+                    if (y > startY - 50 && y < startY + (maxVisibleLines * lineHeight)) {
                         ctx.fillStyle = i === currentWordIndex ? '#00b4d8' : '#e0e0e0';
                         ctx.fillText(word, canvas.width / 2, y);
                     }
                 });
                 
-                // Progress
-                const progress = ((currentWordIndex + 1) / words.length * 100).toFixed(0);
-                ctx.fillStyle = '#888';
+                ctx.restore();
+                
+                // Progress bar
+                const progressBarY = canvas.height - 80;
+                const progressBarWidth = 600;
+                const progressBarX = (canvas.width - progressBarWidth) / 2;
+                
+                // Background bar
+                ctx.fillStyle = '#444';
+                ctx.fillRect(progressBarX, progressBarY, progressBarWidth, 20);
+                
+                // Progress fill
+                const progressPercent = (currentWordIndex + 1) / words.length;
+                ctx.fillStyle = '#00b4d8';
+                ctx.fillRect(progressBarX, progressBarY, progressBarWidth * progressPercent, 20);
+                
+                // Progress text
+                ctx.fillStyle = '#fff';
                 ctx.font = '18px sans-serif';
-                ctx.fillText(`Progress: ${progress}%`, canvas.width / 2, canvas.height - 40);
+                ctx.fillText(`${((currentWordIndex + 1) / words.length * 100).toFixed(0)}% - Word ${currentWordIndex + 1}/${words.length}`, canvas.width / 2, canvas.height - 40);
                 
                 currentFrame++;
                 
@@ -863,6 +896,16 @@ document.addEventListener('DOMContentLoaded', () => {
     window.viewReplay = viewReplay;
 
     // === CHAT FUNCTIONS ===
+    function toggleChat() {
+        if (chatContainer.classList.contains('chat-minimized')) {
+            chatContainer.classList.remove('chat-minimized');
+            toggleChatBtn.textContent = '💬 Hide Chat';
+        } else {
+            chatContainer.classList.add('chat-minimized');
+            toggleChatBtn.textContent = '💬 Open Chat';
+        }
+    }
+
     function sendChatMessage() {
         const message = chatInput.value.trim();
         if (!message || !dataChannel || dataChannel.readyState !== 'open') return;
@@ -1124,6 +1167,7 @@ document.addEventListener('DOMContentLoaded', () => {
         gameContainerDiv.classList.remove('hidden');
         gameContainerDiv.style.display = 'flex';
         chatContainer.classList.remove('hidden');
+        chatContainer.classList.add('chat-minimized'); // Start minimized
         gameModeTitle.textContent = 'Multiplayer';
         gameMode = 'multi';
 
@@ -1142,6 +1186,7 @@ document.addEventListener('DOMContentLoaded', () => {
         wordInput.disabled = true;
         submitButton.disabled = true;
         turnIndicatorDiv.textContent = "Read the definition, then wait for opponent...";
+        toggleChatBtn.textContent = '💬 Open Chat';
         
         // Show definition automatically for multiplayer too
         await showWordDefinition(finalWord, true);

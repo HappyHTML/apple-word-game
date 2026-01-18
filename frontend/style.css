@@ -487,3 +487,34 @@ input:checked + .slider:before {
         flex-direction: row;
     }
 }
+/* Chat Toggle Button */
+#toggle-chat-btn {
+    margin: 10px 0;
+    background-color: #28a745;
+}
+
+#toggle-chat-btn:hover {
+    background-color: #218838;
+}
+
+/* Chat minimized state */
+#chat-container.chat-minimized {
+    display: none !important;
+}
+
+#chat-container h3 {
+    margin: 0 0 10px 0;
+    text-align: center;
+    color: var(--text-color);
+}
+
+/* Make word input more prominent when chat is visible */
+#word-input {
+    border: 2px solid var(--button-bg);
+}
+
+#word-input:focus {
+    outline: none;
+    border-color: #00ff00;
+    box-shadow: 0 0 5px var(--button-bg);
+}

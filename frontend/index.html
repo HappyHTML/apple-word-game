@@ -260,21 +260,21 @@
         <div id="timer-display" class="hidden">⏱️ Time: <span id="timer-value">0:00</span></div>
         
         <!-- Multiplayer Chat -->
-        <div id="chat-container" class="hidden">
-            <div id="chat-messages"></div>
-            <div class="chat-input-container">
-                <input type="text" id="chat-input" placeholder="Type a message...">
-                <button id="send-chat-btn">Send</button>
-            </div>
-        </div>
-
-        <div id="word-history"></div>
-        <div id="turn-indicator"></div>
-        <input type="text" id="word-input" placeholder="Enter your word...">
-        <button id="submit-word">Submit</button>
-        <p id="game-code-display"></p>
+<button id="toggle-chat-btn" class="hidden">💬 Open Chat</button>
+<div id="chat-container" class="hidden chat-minimized">
+    <h3>💬 Chat</h3>
+    <div id="chat-messages"></div>
+    <div class="chat-input-container">
+        <input type="text" id="chat-input" placeholder="Type a message...">
+        <button id="send-chat-btn">Send</button>
     </div>
+</div>
 
+<div id="word-history"></div>
+<div id="turn-indicator"></div>
+<input type="text" id="word-input" placeholder="Enter your word...">
+<button id="submit-word">Submit</button>
+<p id="game-code-display"></p>
     <!-- Confetti Canvas -->
     <canvas id="confetti-canvas"></canvas>
 
