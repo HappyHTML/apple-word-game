@@ -13,6 +13,7 @@
         <button id="single-player-btn">Single Player</button>
         <button id="multiplayer-btn">Multiplayer</button>
         <button id="stats-btn">📊 Statistics</button>
+        <button id="replays-btn">🎬 Replays</button>
         <button id="settings-btn">⚙️ Settings</button>
     </div>
 
@@ -139,6 +140,18 @@
                     <span class="toggle-label">On</span>
                 </div>
             </div>
+
+            <div class="setting-item">
+                <label for="save-replays-toggle">Save Game Replays:</label>
+                <div class="toggle-container">
+                    <span class="toggle-label">Off</span>
+                    <label class="switch">
+                        <input type="checkbox" id="save-replays-toggle" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <span class="toggle-label">On</span>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -181,6 +194,45 @@
         </div>
     </div>
 
+    <!-- Replays Modal -->
+    <div id="replays-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-replays-modal">&times;</span>
+            <h2>🎬 Game Replays</h2>
+            <div id="replays-list">
+                <p class="no-replays">No replays saved yet. Play some games to see them here!</p>
+            </div>
+            <button id="clear-replays-btn" style="margin-top: 20px; background-color: #dc3545;">Clear All Replays</button>
+        </div>
+    </div>
+
+    <!-- Replay Viewer Modal -->
+    <div id="replay-viewer-modal" class="modal hidden">
+        <div class="modal-content replay-viewer-content">
+            <span class="close-replay-viewer-modal">&times;</span>
+            <h2>🎬 Replay: <span id="replay-title"></span></h2>
+            <div id="replay-info">
+                <p><strong>Mode:</strong> <span id="replay-mode"></span></p>
+                <p><strong>Result:</strong> <span id="replay-result"></span></p>
+                <p><strong>Duration:</strong> <span id="replay-duration"></span></p>
+                <p><strong>Date:</strong> <span id="replay-date"></span></p>
+            </div>
+            <div id="replay-controls">
+                <button id="replay-play-btn">▶️ Play</button>
+                <button id="replay-pause-btn" class="hidden">⏸️ Pause</button>
+                <button id="replay-restart-btn">🔄 Restart</button>
+                <label for="replay-speed">Speed:</label>
+                <select id="replay-speed">
+                    <option value="0.5">0.5x</option>
+                    <option value="1" selected>1x</option>
+                    <option value="2">2x</option>
+                    <option value="4">4x</option>
+                </select>
+            </div>
+            <div id="replay-word-history"></div>
+        </div>
+    </div>
+
     <!-- Word Definition Modal -->
     <div id="definition-modal" class="modal hidden">
         <div class="modal-content">
@@ -202,7 +254,7 @@
     <div id="game-container" class="hidden">
         <button id="back-from-game-btn" class="back-button">🏠 Back to Home</button>
         <h2 id="game-mode-title"></h2>
-        <p><strong>Final Word:</strong> <span id="final-word"></span></p>
+        <p><strong>Final Word:</strong> <span id="final-word" class="clickable-word" onclick="showWordDefinition(this.textContent)"></span></p>
         <button id="new-word-btn">New Word 🔄</button>
         <div id="timer-display" class="hidden">⏱️ Time: <span id="timer-value">0:00</span></div>
         

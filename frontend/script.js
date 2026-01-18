@@ -4,12 +4,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const singlePlayerBtn = document.getElementById('single-player-btn');
     const multiplayerBtn = document.getElementById('multiplayer-btn');
     const statsBtn = document.getElementById('stats-btn');
+    const replaysBtn = document.getElementById('replays-btn');
     const settingsBtn = document.getElementById('settings-btn');
     const settingsModal = document.getElementById('settings-modal');
     const statsModal = document.getElementById('stats-modal');
+    const replaysModal = document.getElementById('replays-modal');
+    const replayViewerModal = document.getElementById('replay-viewer-modal');
     const definitionModal = document.getElementById('definition-modal');
     const closeModal = document.querySelector('.close-modal');
     const closeStatsModal = document.querySelector('.close-stats-modal');
+    const closeReplaysModal = document.querySelector('.close-replays-modal');
+    const closeReplayViewerModal = document.querySelector('.close-replay-viewer-modal');
     const closeDefinitionModal = document.querySelector('.close-definition-modal');
     
     // Settings Elements
@@ -26,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const animationSpeedToggle = document.getElementById('animation-speed-toggle');
     const timerToggle = document.getElementById('timer-toggle');
     const confettiToggle = document.getElementById('confetti-toggle');
+    const saveReplaysToggle = document.getElementById('save-replays-toggle');
     
     // Game Elements
     const timerDisplay = document.getElementById('timer-display');
@@ -66,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let isMyTurn = true;
     let gameTimer = null;
     let gameStartTime = 0;
+    let currentGameActions = []; // For replay recording
 
     // Multiplayer State
     let peerConnection;
@@ -88,6 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
     singlePlayerBtn.addEventListener('click', startSinglePlayerGame);
     multiplayerBtn.addEventListener('click', showMultiplayerMenu);
     statsBtn.addEventListener('click', openStatsModal);
+    replaysBtn.addEventListener('click', openReplaysModal);
     createGameBtn.addEventListener('click', createMultiplayerGame);
     joinGameBtn.addEventListener('click', joinMultiplayerGame);
     submitButton.addEventListener('click', handleUserInput);
@@ -97,7 +105,14 @@ document.addEventListener('DOMContentLoaded', () => {
     settingsBtn.addEventListener('click', openSettings);
     closeModal.addEventListener('click', closeSettings);
     closeStatsModal.addEventListener('click', closeStatsModal_);
+    closeReplaysModal.addEventListener('click', closeReplaysModal_);
+    closeReplayViewerModal.addEventListener('click', closeReplayViewerModal_);
     closeDefinitionModal.addEventListener('click', closeDefinitionModal_);
+    
+    document.getElementById('clear-replays-btn').addEventListener('click', clearAllReplays);
+    document.getElementById('replay-play-btn').addEventListener('click', playReplay);
+    document.getElementById('replay-pause-btn').addEventListener('click', pauseReplay);
+    document.getElementById('replay-restart-btn').addEventListener('click', restartReplay);
     
     colorThemeSelect.addEventListener('change', changeColorTheme);
     themeToggle.addEventListener('change', toggleTheme);
@@ -111,6 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
     animationSpeedToggle.addEventListener('change', changeAnimationSpeed);
     timerToggle.addEventListener('change', toggleTimer);
     confettiToggle.addEventListener('change', saveSettings);
+    saveReplaysToggle.addEventListener('change', saveSettings);
     
     document.getElementById('reset-stats-btn').addEventListener('click', resetStatistics);
     
@@ -127,6 +143,8 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('click', (e) => {
         if (e.target === settingsModal) closeSettings();
         if (e.target === statsModal) closeStatsModal_();
+        if (e.target === replaysModal) closeReplaysModal_();
+        if (e.target === replayViewerModal) closeReplayViewerModal_();
         if (e.target === definitionModal) closeDefinitionModal_();
     });
     
@@ -163,6 +181,26 @@ document.addEventListener('DOMContentLoaded', () => {
     function closeDefinitionModal_() {
         definitionModal.classList.add('hidden');
         definitionModal.style.display = 'none';
+    }
+
+    function openReplaysModal() {
+        displayReplaysList();
+        replaysModal.classList.remove('hidden');
+        replaysModal.style.display = 'flex';
+    }
+
+    function closeReplaysModal_() {
+        replaysModal.classList.add('hidden');
+        replaysModal.style.display = 'none';
+    }
+
+    function closeReplayViewerModal_() {
+        if (window.replayInterval) {
+            clearInterval(window.replayInterval);
+            window.replayInterval = null;
+        }
+        replayViewerModal.classList.add('hidden');
+        replayViewerModal.style.display = 'none';
     }
 
     function changeColorTheme() {
@@ -260,6 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('difficulty', difficultySelect.value);
         localStorage.setItem('aiSpeed', aiSpeedSelect.value);
         localStorage.setItem('confettiEnabled', confettiToggle.checked);
+        localStorage.setItem('saveReplays', saveReplaysToggle.checked);
     }
 
     function loadAllSettings() {
@@ -324,6 +363,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const confettiEnabled = localStorage.getItem('confettiEnabled');
         if (confettiEnabled !== null) {
             confettiToggle.checked = confettiEnabled === 'true';
+        }
+        
+        // Save Replays
+        const saveReplays = localStorage.getItem('saveReplays');
+        if (saveReplays !== null) {
+            saveReplaysToggle.checked = saveReplays === 'true';
         }
     }
 
@@ -480,12 +525,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // === WORD DEFINITION FUNCTIONS ===
-    async function showWordDefinition(word) {
+    async function showWordDefinition(word, isGameStart = false) {
         document.getElementById('definition-word').textContent = word;
         document.getElementById('definition-content').innerHTML = '<p class="definition-loading">Loading definition...</p>';
         
         definitionModal.classList.remove('hidden');
         definitionModal.style.display = 'flex';
+        
+        // Store if this is a game start definition
+        window.isGameStartDefinition = isGameStart;
         
         try {
             const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
@@ -498,6 +546,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const entry = data[0];
             
             let html = '';
+            
+            if (isGameStart) {
+                html += '<p style="background-color: var(--button-bg); color: var(--button-text); padding: 10px; border-radius: 5px; text-align: center; font-weight: bold;">🎯 Your Goal: Reach this word!</p>';
+            }
             
             if (entry.phonetic) {
                 html += `<p><strong>Pronunciation:</strong> ${entry.phonetic}</p>`;
@@ -513,11 +565,196 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
             
+            if (isGameStart) {
+                html += '<p style="margin-top: 15px; text-align: center; color: #888; font-size: 0.9em;">Close this to start the game</p>';
+            }
+            
             document.getElementById('definition-content').innerHTML = html;
         } catch (error) {
-            document.getElementById('definition-content').innerHTML = `<p>Sorry, couldn't find a definition for "${word}".</p>`;
+            let html = `<p>Sorry, couldn't find a definition for "${word}".</p>`;
+            if (isGameStart) {
+                html += '<p style="margin-top: 15px; text-align: center; color: #888;">Close this to start the game</p>';
+            }
+            document.getElementById('definition-content').innerHTML = html;
         }
     }
+
+    function closeDefinitionModal_() {
+        const wasGameStart = window.isGameStartDefinition;
+        window.isGameStartDefinition = false;
+        
+        definitionModal.classList.add('hidden');
+        definitionModal.style.display = 'none';
+        
+        // If this was a game start definition, now handle game start
+        if (wasGameStart) {
+            if (gameMode === 'single') {
+                setTurn(true);
+                if (timerToggle.checked) {
+                    startTimer();
+                }
+            } else if (gameMode === 'multi') {
+                // For multiplayer, keep waiting for connection but start timer
+                turnIndicatorDiv.textContent = isMyTurn ? "Waiting for opponent to join..." : "Waiting for connection...";
+                if (timerToggle.checked) {
+                    startTimer();
+                }
+            }
+        }
+    }
+
+    // === REPLAY SYSTEM ===
+    function saveReplay(gameData) {
+        if (!saveReplaysToggle.checked) return;
+        
+        const replays = JSON.parse(localStorage.getItem('gameReplays') || '[]');
+        
+        const replay = {
+            id: Date.now(),
+            date: new Date().toLocaleString(),
+            mode: gameData.mode,
+            finalWord: gameData.finalWord,
+            result: gameData.result,
+            duration: gameData.duration,
+            actions: gameData.actions
+        };
+        
+        replays.unshift(replay); // Add to beginning
+        
+        // Keep only last 20 replays
+        if (replays.length > 20) {
+            replays.pop();
+        }
+        
+        localStorage.setItem('gameReplays', JSON.stringify(replays));
+    }
+
+    function displayReplaysList() {
+        const replays = JSON.parse(localStorage.getItem('gameReplays') || '[]');
+        const replaysListDiv = document.getElementById('replays-list');
+        
+        if (replays.length === 0) {
+            replaysListDiv.innerHTML = '<p class="no-replays">No replays saved yet. Play some games to see them here!</p>';
+            return;
+        }
+        
+        let html = '';
+        replays.forEach(replay => {
+            const resultEmoji = replay.result === 'won' ? '🏆' : '❌';
+            const mins = Math.floor(replay.duration / 60);
+            const secs = replay.duration % 60;
+            const timeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
+            
+            html += `
+                <div class="replay-item" onclick="viewReplay(${replay.id})">
+                    <div class="replay-header">
+                        <span class="replay-result">${resultEmoji}</span>
+                        <span class="replay-word">${replay.finalWord}</span>
+                        <span class="replay-mode">${replay.mode}</span>
+                    </div>
+                    <div class="replay-details">
+                        <span>${replay.date}</span>
+                        <span>${timeStr}</span>
+                        <span>${replay.actions.length} moves</span>
+                    </div>
+                </div>
+            `;
+        });
+        
+        replaysListDiv.innerHTML = html;
+    }
+
+    function viewReplay(replayId) {
+        const replays = JSON.parse(localStorage.getItem('gameReplays') || '[]');
+        const replay = replays.find(r => r.id === replayId);
+        
+        if (!replay) return;
+        
+        // Set up replay viewer
+        document.getElementById('replay-title').textContent = replay.finalWord;
+        document.getElementById('replay-mode').textContent = replay.mode;
+        document.getElementById('replay-result').textContent = replay.result === 'won' ? '🏆 Won' : '❌ Lost';
+        
+        const mins = Math.floor(replay.duration / 60);
+        const secs = replay.duration % 60;
+        document.getElementById('replay-duration').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+        document.getElementById('replay-date').textContent = replay.date;
+        
+        // Store current replay
+        window.currentReplay = replay;
+        window.replayIndex = 0;
+        window.replayPlaying = false;
+        
+        // Reset display
+        document.getElementById('replay-word-history').innerHTML = '<p>apple</p>';
+        
+        // Show viewer
+        replaysModal.classList.add('hidden');
+        replayViewerModal.classList.remove('hidden');
+        replayViewerModal.style.display = 'flex';
+    }
+
+    function playReplay() {
+        if (!window.currentReplay) return;
+        
+        window.replayPlaying = true;
+        document.getElementById('replay-play-btn').classList.add('hidden');
+        document.getElementById('replay-pause-btn').classList.remove('hidden');
+        
+        const speed = parseFloat(document.getElementById('replay-speed').value);
+        const baseDelay = 1000; // 1 second between moves
+        const delay = baseDelay / speed;
+        
+        window.replayInterval = setInterval(() => {
+            if (window.replayIndex >= window.currentReplay.actions.length) {
+                pauseReplay();
+                return;
+            }
+            
+            const action = window.currentReplay.actions[window.replayIndex];
+            const historyDiv = document.getElementById('replay-word-history');
+            
+            const wordP = document.createElement('p');
+            wordP.textContent = action.word;
+            wordP.style.opacity = '0';
+            wordP.style.transition = 'opacity 0.3s';
+            historyDiv.appendChild(wordP);
+            
+            setTimeout(() => {
+                wordP.style.opacity = '1';
+            }, 50);
+            
+            historyDiv.scrollTop = historyDiv.scrollHeight;
+            
+            window.replayIndex++;
+        }, delay);
+    }
+
+    function pauseReplay() {
+        window.replayPlaying = false;
+        if (window.replayInterval) {
+            clearInterval(window.replayInterval);
+            window.replayInterval = null;
+        }
+        document.getElementById('replay-play-btn').classList.remove('hidden');
+        document.getElementById('replay-pause-btn').classList.add('hidden');
+    }
+
+    function restartReplay() {
+        pauseReplay();
+        window.replayIndex = 0;
+        document.getElementById('replay-word-history').innerHTML = '<p>apple</p>';
+    }
+
+    function clearAllReplays() {
+        if (confirm('Are you sure you want to delete all replays? This cannot be undone.')) {
+            localStorage.setItem('gameReplays', '[]');
+            displayReplaysList();
+        }
+    }
+
+    // Make these functions globally accessible
+    window.viewReplay = viewReplay;
 
     // === CHAT FUNCTIONS ===
     function sendChatMessage() {
@@ -589,6 +826,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function startSinglePlayerGame() {
         gameMode = 'single';
+        currentGameActions = [];
         menuDiv.classList.add('hidden');
         multiplayerMenuDiv.classList.add('hidden');
         gameContainerDiv.classList.remove('hidden');
@@ -596,10 +834,14 @@ document.addEventListener('DOMContentLoaded', () => {
         gameModeTitle.textContent = 'Single Player';
         await fetchFinalWord();
         updateHistory();
-        setTurn(true);
-        if (timerToggle.checked) {
-            startTimer();
-        }
+        
+        // Disable input until definition is closed
+        wordInput.disabled = true;
+        submitButton.disabled = true;
+        turnIndicatorDiv.textContent = "Read the definition to start...";
+        
+        // Show definition automatically
+        await showWordDefinition(finalWord, true); // true = game start mode
     }
 
     // === CORE GAME LOGIC ===
@@ -632,6 +874,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const newWord = wordInput.value.trim().toLowerCase();
         if (newWord && !history.includes(newWord)) {
             history.push(newWord);
+            currentGameActions.push({ word: newWord, player: 'user', timestamp: Date.now() });
             updateHistory();
             wordInput.value = '';
 
@@ -642,6 +885,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (newWord === finalWord.toLowerCase()) {
                 const elapsed = getElapsedTime();
                 recordGameEnd(true, history.length - 1, elapsed);
+                saveReplay({
+                    mode: gameMode === 'single' ? 'Single Player' : 'Multiplayer',
+                    finalWord: finalWord,
+                    result: 'won',
+                    duration: elapsed || 0,
+                    actions: currentGameActions
+                });
                 endGame('You reached the final word! 🎉');
                 triggerConfetti();
             } else {
@@ -684,11 +934,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const aiWord = data.word.toLowerCase();
 
             history.push(aiWord);
+            currentGameActions.push({ word: aiWord, player: 'ai', timestamp: Date.now() });
             updateHistory();
 
             if (aiWord === finalWord.toLowerCase()) {
                 const elapsed = getElapsedTime();
                 recordGameEnd(false, history.length - 1, elapsed);
+                saveReplay({
+                    mode: 'Single Player',
+                    finalWord: finalWord,
+                    result: 'lost',
+                    duration: elapsed || 0,
+                    actions: currentGameActions
+                });
                 endGame('The AI reached the final word!');
             } else {
                 setTurn(true);
@@ -700,6 +958,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function handleNewWord() {
         history = ['apple'];
+        currentGameActions = [];
         await fetchFinalWord();
         updateHistory();
         wordInput.value = '';
@@ -739,6 +998,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function createMultiplayerGame() {
         gameCode = generateGameCode();
+        currentGameActions = [];
         gameCodeDisplay.textContent = `Game Code: ${gameCode}`;
 
         multiplayerMenuDiv.classList.add('hidden');
@@ -762,15 +1022,15 @@ document.addEventListener('DOMContentLoaded', () => {
         isMyTurn = true;
         wordInput.disabled = true;
         submitButton.disabled = true;
-        turnIndicatorDiv.textContent = "Waiting for opponent to join...";
+        turnIndicatorDiv.textContent = "Read the definition, then wait for opponent...";
         
-        if (timerToggle.checked) {
-            startTimer();
-        }
+        // Show definition automatically for multiplayer too
+        await showWordDefinition(finalWord, true);
     }
 
     async function joinMultiplayerGame() {
         gameCode = gameCodeInput.value.trim().toUpperCase();
+        currentGameActions = [];
         if (!gameCode) return alert('Please enter a game code.');
 
         multiplayerMenuDiv.classList.add('hidden');
@@ -792,11 +1052,10 @@ document.addEventListener('DOMContentLoaded', () => {
         isMyTurn = false;
         wordInput.disabled = true;
         submitButton.disabled = true;
-        turnIndicatorDiv.textContent = "Waiting for connection...";
+        turnIndicatorDiv.textContent = "Read the definition, then wait for connection...";
         
-        if (timerToggle.checked) {
-            startTimer();
-        }
+        // Show definition automatically for joiner too
+        await showWordDefinition(finalWord, true);
     }
 
     function setupWebSocket() {
@@ -938,10 +1197,18 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (message.type === 'word') {
                 history.push(message.word);
+                currentGameActions.push({ word: message.word, player: 'opponent', timestamp: Date.now() });
                 updateHistory();
                 if (message.word === finalWord.toLowerCase()) {
                     const elapsed = getElapsedTime();
                     recordGameEnd(false, history.length - 1, elapsed);
+                    saveReplay({
+                        mode: 'Multiplayer',
+                        finalWord: finalWord,
+                        result: 'lost',
+                        duration: elapsed || 0,
+                        actions: currentGameActions
+                    });
                     endGame('Your opponent reached the final word!');
                 } else {
                     setTurn(true);

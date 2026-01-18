@@ -487,3 +487,116 @@ input:checked + .slider:before {
         flex-direction: row;
     }
 }
+/* Replay Styles */
+.replay-item {
+    padding: 15px;
+    margin: 10px 0;
+    background-color: var(--input-bg);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.2s;
+}
+
+.replay-item:hover {
+    background-color: var(--border-color);
+    transform: translateX(5px);
+}
+
+.replay-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+.replay-result {
+    font-size: 1.5em;
+}
+
+.replay-word {
+    flex: 1;
+    font-size: 1.2em;
+    color: var(--button-bg);
+}
+
+.replay-mode {
+    font-size: 0.9em;
+    padding: 3px 8px;
+    background-color: var(--button-bg);
+    color: var(--button-text);
+    border-radius: 3px;
+}
+
+.replay-details {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85em;
+    color: #888;
+}
+
+.no-replays {
+    text-align: center;
+    color: #888;
+    font-style: italic;
+    padding: 20px;
+}
+
+.replay-viewer-content {
+    max-width: 600px;
+}
+
+#replay-info {
+    background-color: var(--input-bg);
+    padding: 15px;
+    border-radius: 5px;
+    margin: 15px 0;
+}
+
+#replay-info p {
+    margin: 8px 0;
+}
+
+#replay-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin: 15px 0;
+    flex-wrap: wrap;
+}
+
+#replay-controls button {
+    padding: 8px 15px;
+}
+
+#replay-controls select {
+    padding: 8px;
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    border: 1px solid var(--input-border);
+    border-radius: 3px;
+}
+
+#replay-word-history {
+    height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    background-color: var(--input-bg);
+    padding: 10px;
+    border-radius: 5px;
+}
+
+#replay-word-history p {
+    margin: 5px 0;
+    padding: 5px;
+}
+
+.clickable-word {
+    cursor: pointer;
+    text-decoration: underline;
+    color: var(--button-bg);
+}
+
+.clickable-word:hover {
+    opacity: 0.7;
+}
