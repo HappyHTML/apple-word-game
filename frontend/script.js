@@ -1213,23 +1213,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     setTurn(true);
                 }
-            } else if (message.type === 'new-word') {
-                finalWord = message.word;
-                finalWordSpan.textContent = finalWord;
-                history = ['apple'];
-                updateHistory();
-                wordInput.value = '';
-                
-                const endMessages = wordHistoryDiv.querySelectorAll('p strong');
-                endMessages.forEach(msg => msg.parentElement.remove());
-                
-                setTurn(false);
-            } else if (message.type === 'chat') {
-                receiveChatMessage(message.message);
             }
         };
     }
-
-    // Make showWordDefinition globally accessible
-    window.showWordDefinition = showWordDefinition;
 });
