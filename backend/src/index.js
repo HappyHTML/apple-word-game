@@ -17,7 +17,7 @@ export default {
 
     if (path[0] === "api") {
       if (path[1] === "get-word") {
-        return this.getRandomWord(env);
+        return this.getRandomWord(request, env);
       } else if (path[1] === "get-next-word") {
         return this.getNextWord(request, env);
       } else {
@@ -80,7 +80,7 @@ export default {
     }
   },
 
-  async getRandomWord(env) {
+  async getRandomWord(request, env) {
     try {
       if (!env.GROQ_API_KEY) {
         console.error("GROQ_API_KEY is not set");
@@ -90,6 +90,19 @@ export default {
         });
       }
 
+      // Get difficulty from query parameter
+      const url = new URL(request.url);
+      const difficulty = url.searchParams.get('difficulty') || 'medium';
+      
+      let difficultyPrompt = '';
+      if (difficulty === 'easy') {
+        difficultyPrompt = 'very common, everyday words that everyone knows (like: chair, water, phone, dog, sun)';
+      } else if (difficulty === 'hard') {
+        difficultyPrompt = 'less common, more sophisticated words (like: archipelago, ephemeral, labyrinth, memoir, pinnacle)';
+      } else {
+        difficultyPrompt = 'moderately common words (like: bicycle, tornado, telescope, volcano, library)';
+      }
+
       // Generate random elements to force variety
       const timestamp = Date.now();
       const randomNum = Math.floor(Math.random() * 10000);
@@ -97,6 +110,8 @@ export default {
       const randomCategory = categories[Math.floor(Math.random() * categories.length)];
       
       const prompt = `You are generating a word for a word game. Generate ONE completely random, unpredictable common noun from the category: ${randomCategory}.
+
+Use ${difficultyPrompt}.
 
 CRITICAL: Be EXTREMELY varied - avoid repeating patterns. Don't favor any particular letters or sounds.
 
