@@ -1,11 +1,144 @@
+:root {
+    --bg-color: #f0f0f0;
+    --text-color: #000;
+    --container-bg: #fff;
+    --border-color: #ccc;
+    --input-bg: #fff;
+    --input-border: #ccc;
+    --button-bg: #007bff;
+    --button-text: #fff;
+    --button-hover: #0056b3;
+    --transition-speed: 0.3s;
+}
+
+/* Dark Mode */
+body.dark-mode {
+    --bg-color: #1a1a1a;
+    --text-color: #e0e0e0;
+    --container-bg: #2d2d2d;
+    --border-color: #444;
+    --input-bg: #3a3a3a;
+    --input-border: #555;
+    --button-bg: #0d6efd;
+    --button-text: #fff;
+    --button-hover: #0a58ca;
+}
+
+/* Color Themes */
+body.theme-ocean {
+    --button-bg: #0077be;
+    --button-hover: #005a8d;
+}
+
+body.theme-ocean.dark-mode {
+    --bg-color: #0a1929;
+    --container-bg: #1e3a5f;
+    --border-color: #2d5a7b;
+    --input-bg: #173a52;
+    --button-bg: #00b4d8;
+    --button-hover: #0096c7;
+}
+
+body.theme-forest {
+    --button-bg: #2d6a4f;
+    --button-hover: #1b4332;
+}
+
+body.theme-forest.dark-mode {
+    --bg-color: #081c15;
+    --container-bg: #1b4332;
+    --border-color: #2d6a4f;
+    --input-bg: #1a3a2e;
+    --button-bg: #52b788;
+    --button-hover: #40916c;
+}
+
+body.theme-sunset {
+    --button-bg: #7209b7;
+    --button-hover: #560bad;
+}
+
+body.theme-sunset.dark-mode {
+    --bg-color: #240046;
+    --container-bg: #3c096c;
+    --border-color: #5a189a;
+    --input-bg: #4a148c;
+    --button-bg: #b185db;
+    --button-hover: #9d4edd;
+}
+
+body.theme-cherry {
+    --button-bg: #c9184a;
+    --button-hover: #a4133c;
+}
+
+body.theme-cherry.dark-mode {
+    --bg-color: #1a0a0f;
+    --container-bg: #590d22;
+    --border-color: #800f2f;
+    --input-bg: #6b1835;
+    --button-bg: #ff4d6d;
+    --button-hover: #e63946;
+}
+
 body {
     font-family: sans-serif;
     display: flex;
     flex-direction: column;
     align-items: center;
-    background-color: #f0f0f0;
+    background-color: var(--bg-color);
+    color: var(--text-color);
     margin: 0;
     padding: 10px;
+    transition: background-color var(--transition-speed), color var(--transition-speed);
+    position: relative;
+    min-height: 100vh;
+}
+
+/* Background patterns and gradients */
+body.bg-gradient1 {
+    background: linear-gradient(135deg, var(--bg-color) 0%, #667eea 100%);
+}
+
+body.bg-gradient2 {
+    background: linear-gradient(135deg, var(--bg-color) 0%, #f093fb 50%, #f5576c 100%);
+}
+
+body.bg-gradient3 {
+    background: linear-gradient(135deg, var(--bg-color) 0%, #4facfe 0%, #00f2fe 100%);
+}
+
+body.bg-pattern1 {
+    background-color: var(--bg-color);
+    background-image: repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(255,255,255,.05) 35px, rgba(255,255,255,.05) 70px);
+}
+
+body.bg-pattern2 {
+    background-color: var(--bg-color);
+    background-image: radial-gradient(circle, rgba(255,255,255,.05) 1px, transparent 1px);
+    background-size: 20px 20px;
+}
+
+body.bg-custom {
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+body.font-small {
+    font-size: 14px;
+}
+
+body.font-medium {
+    font-size: 16px;
+}
+
+body.font-large {
+    font-size: 18px;
+}
+
+body.anim-slow {
+    --transition-speed: 0.6s;
 }
 
 #menu {
@@ -16,7 +149,7 @@ body {
 }
 
 #multiplayer-menu, #game-container {
-    display: none; /* Hidden by default */
+    display: none;
     margin-bottom: 20px;
     flex-direction: column;
     gap: 10px;
@@ -24,42 +157,446 @@ body {
 
 #game-container {
     margin-top: 20px;
-    display: none; /* Hidden by default */
-    border: 1px solid #ccc;
+    display: none;
+    border: 1px solid var(--border-color);
     padding: 20px;
     border-radius: 5px;
-    background-color: #fff;
+    background-color: var(--container-bg);
     width: 100%;
     max-width: 500px;
     box-sizing: border-box;
+    transition: background-color var(--transition-speed), border-color var(--transition-speed);
 }
 
 #word-history {
     height: 200px;
     overflow-y: scroll;
-    border: 1px solid #eee;
+    border: 1px solid var(--border-color);
+    background-color: var(--input-bg);
+    color: var(--text-color);
     padding: 10px;
     margin-bottom: 10px;
+    transition: background-color var(--transition-speed), border-color var(--transition-speed), color var(--transition-speed);
 }
 
-#word-input {
+#word-history p {
+    margin: 5px 0;
+    padding: 5px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+#word-history p:hover {
+    background-color: var(--border-color);
+}
+
+#word-input, #game-code-input {
     width: calc(100% - 80px);
     padding: 10px;
     box-sizing: border-box;
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    border: 1px solid var(--input-border);
+    border-radius: 3px;
+    transition: background-color var(--transition-speed), border-color var(--transition-speed), color var(--transition-speed);
+}
+
+button {
+    padding: 10px;
+    cursor: pointer;
+    background-color: var(--button-bg);
+    color: var(--button-text);
+    border: none;
+    border-radius: 3px;
+    transition: background-color var(--transition-speed);
+}
+
+button:hover {
+    background-color: var(--button-hover);
 }
 
 #submit-word {
-    padding: 10px;
-    cursor: pointer;
     width: 70px;
 }
 
+.back-button {
+    background-color: #6c757d;
+    margin-bottom: 10px;
+}
+
+.back-button:hover {
+    background-color: #5a6268;
+}
+
+#timer-display {
+    font-size: 1.2em;
+    font-weight: bold;
+    text-align: center;
+    margin: 10px 0;
+    padding: 10px;
+    background-color: var(--input-bg);
+    border-radius: 5px;
+    border: 1px solid var(--border-color);
+}
+
+/* Chat Styles */
+#chat-container {
+    margin: 15px 0;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    background-color: var(--container-bg);
+    padding: 10px;
+}
+
+#chat-messages {
+    height: 150px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+    padding: 10px;
+    background-color: var(--input-bg);
+    border-radius: 5px;
+    border: 1px solid var(--border-color);
+}
+
+.chat-message {
+    margin: 5px 0;
+    padding: 5px 10px;
+    border-radius: 5px;
+    background-color: var(--border-color);
+}
+
+.chat-message.own {
+    background-color: var(--button-bg);
+    color: var(--button-text);
+    text-align: right;
+}
+
+.chat-input-container {
+    display: flex;
+    gap: 5px;
+}
+
+#chat-input {
+    flex: 1;
+    padding: 8px;
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    border: 1px solid var(--input-border);
+    border-radius: 3px;
+}
+
+#send-chat-btn {
+    padding: 8px 15px;
+}
+
+/* Statistics Modal */
+#stats-content {
+    margin-top: 20px;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    margin: 5px 0;
+    background-color: var(--input-bg);
+    border-radius: 5px;
+}
+
+.stat-label {
+    font-weight: bold;
+}
+
+.stat-value {
+    color: var(--button-bg);
+    font-weight: bold;
+}
+
+/* Definition Modal */
+#definition-content {
+    margin-top: 15px;
+    line-height: 1.6;
+}
+
+.definition-loading {
+    text-align: center;
+    font-style: italic;
+    color: #888;
+}
+
+/* Confetti Canvas */
+#confetti-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+}
+
 .hidden {
+    display: none !important;
+}
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
     display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background-color: var(--container-bg);
+    color: var(--text-color);
+    padding: 30px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 400px;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+    transition: background-color var(--transition-speed), color var(--transition-speed);
+}
+
+.close-modal, .close-stats-modal, .close-definition-modal {
+    position: absolute;
+    right: 15px;
+    top: 10px;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    color: var(--text-color);
+}
+
+.close-modal:hover, .close-stats-modal:hover, .close-definition-modal:hover {
+    color: #999;
+}
+
+.setting-item {
+    margin: 20px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.setting-item label {
+    font-weight: bold;
+}
+
+.setting-item select, .setting-item input[type="file"] {
+    padding: 8px;
+    border-radius: 5px;
+    border: 1px solid var(--input-border);
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    cursor: pointer;
+    transition: background-color var(--transition-speed), border-color var(--transition-speed), color var(--transition-speed);
+}
+
+.toggle-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.toggle-label {
+    font-size: 16px;
+}
+
+/* Toggle Switch */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: 0.4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #2196F3;
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+/* Scrollbar styling */
+#word-history::-webkit-scrollbar, #chat-messages::-webkit-scrollbar {
+    width: 10px;
+}
+
+#word-history::-webkit-scrollbar-track, #chat-messages::-webkit-scrollbar-track {
+    background: var(--input-bg);
+    border-radius: 5px;
+}
+
+#word-history::-webkit-scrollbar-thumb, #chat-messages::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 5px;
+}
+
+#word-history::-webkit-scrollbar-thumb:hover, #chat-messages::-webkit-scrollbar-thumb:hover {
+    background: #888;
+}
+
+#word-history, #chat-messages {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) var(--input-bg);
 }
 
 @media (min-width: 600px) {
     #menu, #multiplayer-menu {
         flex-direction: row;
     }
+}
+/* Replay Styles */
+.replay-item {
+    padding: 15px;
+    margin: 10px 0;
+    background-color: var(--input-bg);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.2s;
+}
+
+.replay-item:hover {
+    background-color: var(--border-color);
+    transform: translateX(5px);
+}
+
+.replay-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+.replay-result {
+    font-size: 1.5em;
+}
+
+.replay-word {
+    flex: 1;
+    font-size: 1.2em;
+    color: var(--button-bg);
+}
+
+.replay-mode {
+    font-size: 0.9em;
+    padding: 3px 8px;
+    background-color: var(--button-bg);
+    color: var(--button-text);
+    border-radius: 3px;
+}
+
+.replay-details {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85em;
+    color: #888;
+}
+
+.no-replays {
+    text-align: center;
+    color: #888;
+    font-style: italic;
+    padding: 20px;
+}
+
+.replay-viewer-content {
+    max-width: 600px;
+}
+
+#replay-info {
+    background-color: var(--input-bg);
+    padding: 15px;
+    border-radius: 5px;
+    margin: 15px 0;
+}
+
+#replay-info p {
+    margin: 8px 0;
+}
+
+#replay-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin: 15px 0;
+    flex-wrap: wrap;
+}
+
+#replay-controls button {
+    padding: 8px 15px;
+}
+
+#replay-controls select {
+    padding: 8px;
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    border: 1px solid var(--input-border);
+    border-radius: 3px;
+}
+
+#replay-word-history {
+    height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    background-color: var(--input-bg);
+    padding: 10px;
+    border-radius: 5px;
+}
+
+#replay-word-history p {
+    margin: 5px 0;
+    padding: 5px;
+}
+
+.clickable-word {
+    cursor: pointer;
+    text-decoration: underline;
+    color: var(--button-bg);
+}
+
+.clickable-word:hover {
+    opacity: 0.7;
 }
