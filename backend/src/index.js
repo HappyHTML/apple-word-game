@@ -17,7 +17,7 @@ export default {
 
     if (path[0] === "api") {
       if (path[1] === "get-word") {
-        return this.getRandomWord(env);
+        return this.getRandomWord(request, env);
       } else if (path[1] === "get-next-word") {
         return this.getNextWord(request, env);
       } else {
@@ -80,7 +80,7 @@ export default {
     }
   },
 
-  async getRandomWord(env) {
+  async getRandomWord(request, env) {
     try {
       if (!env.GROQ_API_KEY) {
         console.error("GROQ_API_KEY is not set");
@@ -90,6 +90,19 @@ export default {
         });
       }
 
+      // Get difficulty from query parameter
+      const url = new URL(request.url);
+      const difficulty = url.searchParams.get('difficulty') || 'medium';
+      
+      let difficultyPrompt = '';
+      if (difficulty === 'easy') {
+        difficultyPrompt = 'very common, everyday words that everyone knows (like: chair, water, phone, dog, sun)';
+      } else if (difficulty === 'hard') {
+        difficultyPrompt = 'less common, more sophisticated words (like: archipelago, ephemeral, labyrinth, memoir, pinnacle)';
+      } else {
+        difficultyPrompt = 'moderately common words (like: bicycle, tornado, telescope, volcano, library)';
+      }
+
       // Generate random elements to force variety
       const timestamp = Date.now();
       const randomNum = Math.floor(Math.random() * 10000);
@@ -97,6 +110,8 @@ export default {
       const randomCategory = categories[Math.floor(Math.random() * categories.length)];
       
       const prompt = `You are generating a word for a word game. Generate ONE completely random, unpredictable common noun from the category: ${randomCategory}.
+
+Use ${difficultyPrompt}.
 
 CRITICAL: Be EXTREMELY varied - avoid repeating patterns. Don't favor any particular letters or sounds.
 
@@ -195,6 +210,7 @@ export class GameRoom {
     this.env = env;
     this.sessions = [];
     this.finalWord = null;
+    this.roomId = Math.random().toString(36).substring(7); // Add unique room ID for debugging
   }
 
   async fetch(request) {
@@ -204,6 +220,8 @@ export class GameRoom {
     }
 
     const url = new URL(request.url);
+    console.log(`Room ${this.roomId}: Request to ${url.pathname}`);
+    
     if (url.pathname.endsWith("/websocket")) {
       if (request.headers.get("Upgrade") != "websocket") {
         return new Response("Expected websocket", { status: 400 });
@@ -219,6 +237,7 @@ export class GameRoom {
         try {
             const { word } = await request.json();
             this.finalWord = word;
+            console.log(`Room ${this.roomId}: Set final word to ${word}`);
             return new Response(JSON.stringify({ status: 'ok' }), { 
               headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
             });
@@ -231,6 +250,7 @@ export class GameRoom {
     }
 
     if (url.pathname.endsWith("/getFinalWord")) {
+        console.log(`Room ${this.roomId}: Returning final word ${this.finalWord}`);
         return new Response(JSON.stringify({ word: this.finalWord }), { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         });
@@ -242,16 +262,39 @@ export class GameRoom {
   async handleSession(websocket) {
     websocket.accept();
     this.sessions.push(websocket);
+    console.log(`Room ${this.roomId}: Session added. Total sessions: ${this.sessions.length}`);
+
+    // Notify all other sessions that someone joined
+    const joinMessage = JSON.stringify({ type: 'player-joined', count: this.sessions.length });
+    this.sessions.forEach(session => {
+        if (session !== websocket && session.readyState === 1) {
+            try {
+                session.send(joinMessage);
+                console.log(`Room ${this.roomId}: Sent join notification`);
+            } catch (err) {
+                console.error('Error sending join notification:', err);
+            }
+        }
+    });
 
     websocket.addEventListener("message", async msg => {
         try {
             const data = JSON.parse(msg.data);
-            // Relay messages to other clients
+            console.log(`Room ${this.roomId}: Received ${data.type}. Total sessions: ${this.sessions.length}`);
+            
+            // Relay messages to ALL other clients
+            let sentCount = 0;
             this.sessions.forEach(session => {
-                if (session !== websocket) {
-                    session.send(JSON.stringify(data));
+                if (session !== websocket && session.readyState === 1) { // 1 = OPEN
+                    try {
+                        session.send(msg.data); // Send the original string directly
+                        sentCount++;
+                    } catch (err) {
+                        console.error('Error sending to session:', err);
+                    }
                 }
             });
+            console.log(`Room ${this.roomId}: Broadcasted ${data.type} to ${sentCount} sessions`);
         } catch (err) {
             console.error("Failed to parse websocket message:", err);
         }
@@ -259,9 +302,11 @@ export class GameRoom {
 
     websocket.addEventListener("close", () => {
         this.sessions = this.sessions.filter(session => session !== websocket);
+        console.log(`Room ${this.roomId}: Session removed. Total sessions: ${this.sessions.length}`);
     });
+    
     websocket.addEventListener("error", (err) => {
-        console.error("WebSocket error:", err);
+        console.error(`Room ${this.roomId}: WebSocket error:`, err);
         this.sessions = this.sessions.filter(session => session !== websocket);
     });
   }
