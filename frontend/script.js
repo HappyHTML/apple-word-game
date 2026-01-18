@@ -110,9 +110,10 @@ document.addEventListener('DOMContentLoaded', () => {
     closeDefinitionModal.addEventListener('click', closeDefinitionModal_);
     
     document.getElementById('clear-replays-btn').addEventListener('click', clearAllReplays);
-    document.getElementById('replay-play-btn').addEventListener('click', playReplay);
+                document.getElementById('replay-play-btn').addEventListener('click', playReplay);
     document.getElementById('replay-pause-btn').addEventListener('click', pauseReplay);
     document.getElementById('replay-restart-btn').addEventListener('click', restartReplay);
+    document.getElementById('replay-download-btn').addEventListener('click', downloadReplayAsVideo);
     
     colorThemeSelect.addEventListener('change', changeColorTheme);
     themeToggle.addEventListener('change', toggleTheme);
@@ -753,6 +754,111 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    async function downloadReplayAsVideo() {
+        if (!window.currentReplay) {
+            alert('No replay loaded!');
+            return;
+        }
+        
+        alert('🎬 Generating video... This may take a moment. The video will download automatically when ready.');
+        
+        try {
+            // We'll use canvas recording to create an MP4
+            const canvas = document.createElement('canvas');
+            canvas.width = 800;
+            canvas.height = 600;
+            const ctx = canvas.getContext('2d');
+            
+            const stream = canvas.captureStream(30); // 30 FPS
+            const mediaRecorder = new MediaRecorder(stream, {
+                mimeType: 'video/webm;codecs=vp9',
+                videoBitsPerSecond: 2500000
+            });
+            
+            const chunks = [];
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) {
+                    chunks.push(e.data);
+                }
+            };
+            
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `apple-game-replay-${window.currentReplay.finalWord}-${Date.now()}.webm`;
+                a.click();
+                URL.revokeObjectURL(url);
+            };
+            
+            mediaRecorder.start();
+            
+            // Draw frames
+            const actions = window.currentReplay.actions;
+            const fps = 30;
+            const wordDisplayTime = 1000; // 1 second per word
+            const framesPerWord = (fps * wordDisplayTime) / 1000;
+            
+            let currentFrame = 0;
+            let currentWordIndex = 0;
+            const words = ['apple', ...actions.map(a => a.word)];
+            
+            function drawFrame() {
+                // Background
+                ctx.fillStyle = '#1e3a5f';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Title
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 32px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`Replay: ${window.currentReplay.finalWord}`, canvas.width / 2, 60);
+                
+                // Word history
+                ctx.font = '24px sans-serif';
+                const startY = 120;
+                const visibleWords = words.slice(0, currentWordIndex + 1);
+                
+                visibleWords.forEach((word, i) => {
+                    const y = startY + (i * 40);
+                    if (y < canvas.height - 100) {
+                        ctx.fillStyle = i === currentWordIndex ? '#00b4d8' : '#e0e0e0';
+                        ctx.fillText(word, canvas.width / 2, y);
+                    }
+                });
+                
+                // Progress
+                const progress = ((currentWordIndex + 1) / words.length * 100).toFixed(0);
+                ctx.fillStyle = '#888';
+                ctx.font = '18px sans-serif';
+                ctx.fillText(`Progress: ${progress}%`, canvas.width / 2, canvas.height - 40);
+                
+                currentFrame++;
+                
+                if (currentFrame >= framesPerWord) {
+                    currentFrame = 0;
+                    currentWordIndex++;
+                }
+                
+                if (currentWordIndex < words.length) {
+                    requestAnimationFrame(drawFrame);
+                } else {
+                    // Stop recording after a short delay
+                    setTimeout(() => {
+                        mediaRecorder.stop();
+                    }, 1000);
+                }
+            }
+            
+            drawFrame();
+            
+        } catch (error) {
+            console.error('Error creating video:', error);
+            alert('Sorry, video download failed. Your browser might not support this feature.');
+        }
+    }
+
     // Make these functions globally accessible
     window.viewReplay = viewReplay;
 
@@ -872,33 +978,46 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleUserInput() {
         if (!isMyTurn) return;
         const newWord = wordInput.value.trim().toLowerCase();
-        if (newWord && !history.includes(newWord)) {
-            history.push(newWord);
-            currentGameActions.push({ word: newWord, player: 'user', timestamp: Date.now() });
-            updateHistory();
-            wordInput.value = '';
+        
+        // Word validation
+        if (!newWord) return;
+        
+        if (history.includes(newWord)) {
+            alert('⚠️ Word already used! Try a different word.');
+            return;
+        }
+        
+        // Check if trying to skip to final word
+        if (newWord === finalWord.toLowerCase() && history.length <= 2) {
+            alert('❌ You can\'t skip directly to the final word! Build a word chain first.');
+            return;
+        }
+        
+        history.push(newWord);
+        currentGameActions.push({ word: newWord, player: 'user', timestamp: Date.now() });
+        updateHistory();
+        wordInput.value = '';
 
-            if (gameMode === 'multi' && dataChannel && dataChannel.readyState === 'open') {
-                dataChannel.send(JSON.stringify({ type: 'word', word: newWord }));
-            }
+        if (gameMode === 'multi' && dataChannel && dataChannel.readyState === 'open') {
+            dataChannel.send(JSON.stringify({ type: 'word', word: newWord }));
+        }
 
-            if (newWord === finalWord.toLowerCase()) {
-                const elapsed = getElapsedTime();
-                recordGameEnd(true, history.length - 1, elapsed);
-                saveReplay({
-                    mode: gameMode === 'single' ? 'Single Player' : 'Multiplayer',
-                    finalWord: finalWord,
-                    result: 'won',
-                    duration: elapsed || 0,
-                    actions: currentGameActions
-                });
-                endGame('You reached the final word! 🎉');
-                triggerConfetti();
-            } else {
-                setTurn(false);
-                if (gameMode === 'single') {
-                    getAiTurn();
-                }
+        if (newWord === finalWord.toLowerCase()) {
+            const elapsed = getElapsedTime();
+            recordGameEnd(true, history.length - 1, elapsed);
+            saveReplay({
+                mode: gameMode === 'single' ? 'Single Player' : 'Multiplayer',
+                finalWord: finalWord,
+                result: 'won',
+                duration: elapsed || 0,
+                actions: currentGameActions
+            });
+            endGame('You reached the final word! 🎉');
+            triggerConfetti();
+        } else {
+            setTurn(false);
+            if (gameMode === 'single') {
+                getAiTurn();
             }
         }
     }
@@ -1139,22 +1258,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function setupPeerConnection(isCreator) {
         peerConnection = new RTCPeerConnection({
-            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' }
+            ],
+            iceCandidatePoolSize: 10
         });
 
         peerConnection.onicecandidate = (event) => {
             if (event.candidate && socket && socket.readyState === WebSocket.OPEN) {
                 socket.send(JSON.stringify({ type: 'candidate', candidate: event.candidate }));
                 console.log('Sent ICE candidate');
+            } else if (!event.candidate) {
+                console.log('All ICE candidates sent');
             }
         };
 
         peerConnection.onconnectionstatechange = () => {
             console.log('Connection state:', peerConnection.connectionState);
+            if (peerConnection.connectionState === 'connected') {
+                console.log('✅ Peer connection established successfully!');
+            } else if (peerConnection.connectionState === 'failed') {
+                console.error('❌ Peer connection failed');
+                alert('Connection failed. Please try creating a new game.');
+            } else if (peerConnection.connectionState === 'disconnected') {
+                console.warn('⚠️ Peer connection disconnected');
+            }
         };
 
         peerConnection.oniceconnectionstatechange = () => {
             console.log('ICE connection state:', peerConnection.iceConnectionState);
+            if (peerConnection.iceConnectionState === 'failed') {
+                console.error('ICE connection failed, attempting restart...');
+                peerConnection.restartIce();
+            }
         };
 
         peerConnection.ondatachannel = (event) => {
@@ -1164,7 +1302,10 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         if (isCreator) {
-            dataChannel = peerConnection.createDataChannel('game');
+            dataChannel = peerConnection.createDataChannel('game', {
+                ordered: true,
+                maxRetransmits: 3
+            });
             setupDataChannel();
             console.log('Created data channel as creator');
         } else {
@@ -1213,7 +1354,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     setTurn(true);
                 }
+            } else if (message.type === 'new-word') {
+                finalWord = message.word;
+                finalWordSpan.textContent = finalWord;
+                history = ['apple'];
+                updateHistory();
+                wordInput.value = '';
+                
+                const endMessages = wordHistoryDiv.querySelectorAll('p strong');
+                endMessages.forEach(msg => msg.parentElement.remove());
+                
+                setTurn(false);
+            } else if (message.type === 'chat') {
+                receiveChatMessage(message.message);
             }
         };
     }
+
+    // Make showWordDefinition globally accessible
+    window.showWordDefinition = showWordDefinition;
 });
