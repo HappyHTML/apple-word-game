@@ -7,28 +7,275 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Apple 🍎 Game</h1>
+    <h1>Apple 🍎</h1>
 
     <div id="menu">
         <button id="single-player-btn">Single Player</button>
         <button id="multiplayer-btn">Multiplayer</button>
+        <button id="stats-btn">📊 Statistics</button>
+        <button id="replays-btn">🎬 Replays</button>
+        <button id="settings-btn">⚙️ Settings</button>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Settings</h2>
+            
+            <div class="setting-item">
+                <label for="color-theme-select">Color Theme:</label>
+                <select id="color-theme-select">
+                    <option value="default">Default</option>
+                    <option value="ocean">Ocean Blue</option>
+                    <option value="forest">Forest Green</option>
+                    <option value="sunset">Sunset Purple</option>
+                    <option value="cherry">Cherry Red</option>
+                </select>
+            </div>
+
+            <div class="setting-item">
+                <label for="theme-toggle">Light/Dark Mode:</label>
+                <div class="toggle-container">
+                    <span class="toggle-label">☀️ Light</span>
+                    <label class="switch">
+                        <input type="checkbox" id="theme-toggle">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="toggle-label">🌙 Dark</span>
+                </div>
+            </div>
+
+            <div class="setting-item">
+                <label for="background-select">Background:</label>
+                <select id="background-select">
+                    <option value="none">None</option>
+                    <option value="gradient1">Gradient 1</option>
+                    <option value="gradient2">Gradient 2</option>
+                    <option value="gradient3">Gradient 3</option>
+                    <option value="pattern1">Pattern 1</option>
+                    <option value="pattern2">Pattern 2</option>
+                    <option value="custom">Custom Image</option>
+                </select>
+            </div>
+
+            <div class="setting-item hidden" id="custom-bg-upload">
+                <label for="bg-image-input">Upload Background:</label>
+                <input type="file" id="bg-image-input" accept="image/*">
+                <button id="clear-bg-btn">Clear Background</button>
+            </div>
+
+            <div class="setting-item">
+                <label for="auto-scroll-toggle">Auto-scroll Word History:</label>
+                <div class="toggle-container">
+                    <span class="toggle-label">Off</span>
+                    <label class="switch">
+                        <input type="checkbox" id="auto-scroll-toggle" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <span class="toggle-label">On</span>
+                </div>
+            </div>
+
+            <div class="setting-item">
+                <label for="difficulty-select">Word Difficulty:</label>
+                <select id="difficulty-select">
+                    <option value="easy">Easy (Common Words)</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="hard">Hard (Rare Words)</option>
+                </select>
+            </div>
+
+            <div class="setting-item">
+                <label for="ai-speed-select">AI Response Speed:</label>
+                <select id="ai-speed-select">
+                    <option value="0">Instant</option>
+                    <option value="1000" selected>1 second</option>
+                    <option value="2000">2 seconds</option>
+                    <option value="3000">3 seconds</option>
+                </select>
+            </div>
+
+            <div class="setting-item">
+                <label for="font-size-select">Font Size:</label>
+                <select id="font-size-select">
+                    <option value="small">Small</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="large">Large</option>
+                </select>
+            </div>
+
+            <div class="setting-item">
+                <label for="animation-speed-toggle">Animation Speed:</label>
+                <div class="toggle-container">
+                    <span class="toggle-label">Fast</span>
+                    <label class="switch">
+                        <input type="checkbox" id="animation-speed-toggle">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="toggle-label">Slow</span>
+                </div>
+            </div>
+
+            <div class="setting-item">
+                <label for="timer-toggle">Game Timer:</label>
+                <div class="toggle-container">
+                    <span class="toggle-label">Off</span>
+                    <label class="switch">
+                        <input type="checkbox" id="timer-toggle">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="toggle-label">On</span>
+                </div>
+            </div>
+
+            <div class="setting-item">
+                <label for="confetti-toggle">Win Confetti:</label>
+                <div class="toggle-container">
+                    <span class="toggle-label">Off</span>
+                    <label class="switch">
+                        <input type="checkbox" id="confetti-toggle" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <span class="toggle-label">On</span>
+                </div>
+            </div>
+
+            <div class="setting-item">
+                <label for="save-replays-toggle">Save Game Replays:</label>
+                <div class="toggle-container">
+                    <span class="toggle-label">Off</span>
+                    <label class="switch">
+                        <input type="checkbox" id="save-replays-toggle" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <span class="toggle-label">On</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Modal -->
+    <div id="stats-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-stats-modal">&times;</span>
+            <h2>📊 Game Statistics</h2>
+            <div id="stats-content">
+                <div class="stat-row">
+                    <span class="stat-label">Games Played:</span>
+                    <span class="stat-value" id="games-played">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Games Won:</span>
+                    <span class="stat-value" id="games-won">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Win Rate:</span>
+                    <span class="stat-value" id="win-rate">0%</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Best Time:</span>
+                    <span class="stat-value" id="best-time">--:--</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Average Words:</span>
+                    <span class="stat-value" id="avg-words">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Shortest Chain:</span>
+                    <span class="stat-value" id="shortest-chain">--</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Total Playtime:</span>
+                    <span class="stat-value" id="total-playtime">0:00</span>
+                </div>
+            </div>
+            <button id="reset-stats-btn" style="margin-top: 20px; background-color: #dc3545;">Reset Statistics</button>
+        </div>
+    </div>
+
+    <!-- Replays Modal -->
+    <div id="replays-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-replays-modal">&times;</span>
+            <h2>🎬 Game Replays</h2>
+            <div id="replays-list">
+                <p class="no-replays">No replays saved yet. Play some games to see them here!</p>
+            </div>
+            <button id="clear-replays-btn" style="margin-top: 20px; background-color: #dc3545;">Clear All Replays</button>
+        </div>
+    </div>
+
+    <!-- Replay Viewer Modal -->
+    <div id="replay-viewer-modal" class="modal hidden">
+        <div class="modal-content replay-viewer-content">
+            <span class="close-replay-viewer-modal">&times;</span>
+            <h2>🎬 Replay: <span id="replay-title"></span></h2>
+            <div id="replay-info">
+                <p><strong>Mode:</strong> <span id="replay-mode"></span></p>
+                <p><strong>Result:</strong> <span id="replay-result"></span></p>
+                <p><strong>Duration:</strong> <span id="replay-duration"></span></p>
+                <p><strong>Date:</strong> <span id="replay-date"></span></p>
+            </div>
+            <div id="replay-controls">
+                <button id="replay-play-btn">▶️ Play</button>
+                <button id="replay-pause-btn" class="hidden">⏸️ Pause</button>
+                <button id="replay-restart-btn">🔄 Restart</button>
+                <label for="replay-speed">Speed:</label>
+                <select id="replay-speed">
+                    <option value="0.5">0.5x</option>
+                    <option value="1" selected>1x</option>
+                    <option value="2">2x</option>
+                    <option value="4">4x</option>
+                </select>
+            </div>
+            <div id="replay-word-history"></div>
+        </div>
+    </div>
+
+    <!-- Word Definition Modal -->
+    <div id="definition-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-definition-modal">&times;</span>
+            <h2 id="definition-word"></h2>
+            <div id="definition-content">
+                <p class="definition-loading">Loading definition...</p>
+            </div>
+        </div>
     </div>
 
     <div id="multiplayer-menu" class="hidden">
+        <button id="back-from-mp-btn" class="back-button">🏠 Back to Home</button>
         <input type="text" id="game-code-input" placeholder="Enter game code...">
         <button id="join-game-btn">Join Game</button>
         <button id="create-game-btn">Create Game</button>
     </div>
 
     <div id="game-container" class="hidden">
+        <button id="back-from-game-btn" class="back-button">🏠 Back to Home</button>
         <h2 id="game-mode-title"></h2>
-        <p><strong>Final Word:</strong> <span id="final-word"></span></p>
+        <p><strong>Final Word:</strong> <span id="final-word" class="clickable-word" onclick="showWordDefinition(this.textContent)"></span></p>
+        <button id="new-word-btn">New Word 🔄</button>
+        <div id="timer-display" class="hidden">⏱️ Time: <span id="timer-value">0:00</span></div>
+        
+        <!-- Multiplayer Chat -->
+        <div id="chat-container" class="hidden">
+            <div id="chat-messages"></div>
+            <div class="chat-input-container">
+                <input type="text" id="chat-input" placeholder="Type a message...">
+                <button id="send-chat-btn">Send</button>
+            </div>
+        </div>
+
         <div id="word-history"></div>
         <div id="turn-indicator"></div>
         <input type="text" id="word-input" placeholder="Enter your word...">
         <button id="submit-word">Submit</button>
         <p id="game-code-display"></p>
     </div>
+
+    <!-- Confetti Canvas -->
+    <canvas id="confetti-canvas"></canvas>
 
     <script src="script.js"></script>
 </body>
